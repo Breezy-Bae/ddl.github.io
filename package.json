@@ -3,27 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  //
-  // 1) “homepage” tells tools (and CRA‐style deployments) that your app is
-  //    served from /ddl.github.io/ under your GitHub Pages URL:
-  //
-  "homepage": "https://breezy-bae.github.io/ddl.github.io/",
-  //
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview",
-
-    //
-    // 2) If you ever want to deploy via the “gh-pages” npm package (instead of
-    //    GitHub Actions), these scripts let you do:
-    //      npm run predeploy  (→ builds into dist/)
-    //      npm run deploy     (→ pushes dist/ to gh-pages branch)
-    //
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -67,13 +52,9 @@
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
-    //
-    // 3) “react-router-dom” is already present at ^6.26.2.  No change needed:
-    //
-    "react-router-dom": "^6.26.2",
-    //
     "react-hook-form": "^7.53.0",
     "react-resizable-panels": "^2.1.3",
+    "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
@@ -98,11 +79,6 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1",
-
-    //
-    // 4) Add “gh-pages” here so that “npm run deploy” works out of the box:
-    //
-    "gh-pages": "^5.0.0"
+    "vite": "^5.4.1"
   }
 }
