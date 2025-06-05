@@ -206,36 +206,6 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const pauseAuction = async () => {
-    try {
-      await updateDoc(doc(db, 'auction', 'current'), {
-        isActive: false
-      });
-
-      toast({
-        title: "Auction paused",
-        description: "The auction has been paused",
-      });
-    } catch (error) {
-      console.error('Error pausing auction:', error);
-    }
-  };
-
-  const resumeAuction = async () => {
-    try {
-      await updateDoc(doc(db, 'auction', 'current'), {
-        isActive: true
-      });
-
-      toast({
-        title: "Auction resumed",
-        description: "The auction has been resumed",
-      });
-    } catch (error) {
-      console.error('Error resuming auction:', error);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Auction Callouts */}
