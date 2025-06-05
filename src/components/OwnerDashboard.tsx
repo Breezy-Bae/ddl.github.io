@@ -17,7 +17,7 @@ import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer } from 'lucide-re
 const OwnerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { auctionState } = useAuctionStatus();
-  const { team, roster } = useTeamData(user?.teamId || null);
+  const { team, roster, loading } = useTeamData(user?.teamId || null);
   const [bidAmount, setBidAmount] = useState('');
   const [bidHistory, setBidHistory] = useState<BidHistory[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -73,7 +73,7 @@ const OwnerDashboard: React.FC = () => {
     }
 
     // Validate bid
-    const bidError = validateBid(amount, team.remainingPurse, auctionState.highestBid);
+    const bidError = validateBid(amount, team.remainingPurse || 0, auctionState.highestBid);
     if (bidError) {
       toast({
         title: "Invalid bid",
@@ -87,7 +87,7 @@ const OwnerDashboard: React.FC = () => {
     const categoryError = validateCategoryQuota(
       auctionState.currentItem.category,
       roster,
-      team.maxActresses
+      team.maxActresses || 0
     );
     if (categoryError) {
       toast({
@@ -123,6 +123,18 @@ const OwnerDashboard: React.FC = () => {
   const getCategoryCount = (category: string) => {
     return roster.filter(actress => actress.category === category).length;
   };
+
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!team) {
     return (
@@ -172,7 +184,7 @@ const OwnerDashboard: React.FC = () => {
                 <DollarSign className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Remaining Budget</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{team.remainingPurse.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{(team.remainingPurse || 0).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -184,7 +196,7 @@ const OwnerDashboard: React.FC = () => {
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Roster</p>
-                  <p className="text-2xl font-bold text-gray-900">{team.currentActresses}/{team.maxActresses}</p>
+                  <p className="text-2xl font-bold text-gray-900">{team.currentActresses || 0}/{team.maxActresses || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -197,7 +209,8 @@ const OwnerDashboard: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Budget Used</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {((team.budget - team.remainingPurse) / team.budget * 100).toFixed(1)}%
+                    {team.budget && team.remainingPurse ? 
+                      (((team.budget - team.remainingPurse) / team.budget * 100).toFixed(1)) : '0'}%
                   </p>
                 </div>
               </div>
@@ -210,7 +223,7 @@ const OwnerDashboard: React.FC = () => {
                 <Trophy className="h-8 w-8 text-yellow-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{(team.budget - team.remainingPurse).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{(team.budget && team.remainingPurse ? (team.budget - team.remainingPurse) : 0).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -252,7 +265,7 @@ const OwnerDashboard: React.FC = () => {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-gray-600">Current Highest Bid:</span>
-                      <span className="text-xl font-bold">₹{auctionState.highestBid.toLocaleString()}</span>
+                      <span className="text-xl font-bold">₹{(auctionState.highestBid || 0).toLocaleString()}</span>
                     </div>
                     {auctionState.highestBidderName && (
                       <div className="flex justify-between items-center">
@@ -272,7 +285,7 @@ const OwnerDashboard: React.FC = () => {
                     />
                     <Button 
                       onClick={handlePlaceBid}
-                      disabled={!bidAmount || parseInt(bidAmount) <= auctionState.highestBid}
+                      disabled={!bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
                       className="bg-purple-600 hover:bg-purple-700"
                     >
                       Place Bid
@@ -286,8 +299,8 @@ const OwnerDashboard: React.FC = () => {
                         key={amount}
                         variant="outline"
                         size="sm"
-                        onClick={() => setBidAmount((auctionState.highestBid + amount).toString())}
-                        disabled={auctionState.highestBid + amount > team.remainingPurse}
+                        onClick={() => setBidAmount(((auctionState.highestBid || 0) + amount).toString())}
+                        disabled={(auctionState.highestBid || 0) + amount > (team.remainingPurse || 0)}
                       >
                         +₹{amount.toLocaleString()}
                       </Button>
@@ -301,7 +314,7 @@ const OwnerDashboard: React.FC = () => {
                       {bidHistory.map((bid) => (
                         <div key={bid.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
                           <span className="font-medium">{bid.bidderName}</span>
-                          <span>₹{bid.amount.toLocaleString()}</span>
+                          <span>₹{(bid.amount || 0).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -390,8 +403,8 @@ const OwnerDashboard: React.FC = () => {
                         </Badge>
                       </div>
                       <div className="text-sm text-gray-600">
-                        <p>Purchase Price: ₹{actress.purchasePrice?.toLocaleString()}</p>
-                        <p>Base Price: ₹{actress.basePrice.toLocaleString()}</p>
+                        <p>Purchase Price: ₹{(actress.purchasePrice || 0).toLocaleString()}</p>
+                        <p>Base Price: ₹{(actress.basePrice || 0).toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>
