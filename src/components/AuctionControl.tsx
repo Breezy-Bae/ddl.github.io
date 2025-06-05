@@ -129,6 +129,14 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         const auctionRef = doc(db, 'auction', 'current');
         const actressRef = doc(db, 'actresses', auctionState.currentItem!.id);
         
+        // First, do ALL reads before any writes
+        let teamDoc = null;
+        if (auctionState.highestBidder && auctionState.highestBidderTeam) {
+          const teamRef = doc(db, 'teams', auctionState.highestBidderTeam);
+          teamDoc = await transaction.get(teamRef);
+        }
+
+        // Now do ALL writes
         // End auction
         transaction.update(auctionRef, {
           isActive: false,
@@ -154,13 +162,12 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
           });
 
           // Update team budget and count
-          const teamRef = doc(db, 'teams', auctionState.highestBidderTeam);
-          const teamDoc = await transaction.get(teamRef);
-          if (teamDoc.exists()) {
+          if (teamDoc && teamDoc.exists()) {
             const teamData = teamDoc.data();
+            const teamRef = doc(db, 'teams', auctionState.highestBidderTeam);
             transaction.update(teamRef, {
-              remainingPurse: teamData.remainingPurse - auctionState.highestBid,
-              currentActresses: teamData.currentActresses + 1
+              remainingPurse: (teamData.remainingPurse || 0) - auctionState.highestBid,
+              currentActresses: (teamData.currentActresses || 0) + 1
             });
           }
         } else {
