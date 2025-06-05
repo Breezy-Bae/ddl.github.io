@@ -29,13 +29,19 @@ export const placeBid = async (
         throw new Error('Bid must be higher than current highest bid');
       }
       
+      // Extend auction time by 3 seconds when a bid is placed
+      const currentDuration = auctionData.auctionDuration || 30;
+      const newDuration = currentDuration + 3;
+      
       // Update auction state
       transaction.update(auctionRef, {
         highestBid: amount,
         highestBidder: userId,
         highestBidderTeam: teamId,
         highestBidderName: bidderName,
-        lastBidTime: serverTimestamp()
+        lastBidTime: serverTimestamp(),
+        auctionDuration: newDuration,
+        bidCount: (auctionData.bidCount || 0) + 1
       });
       
       // Add to bid history

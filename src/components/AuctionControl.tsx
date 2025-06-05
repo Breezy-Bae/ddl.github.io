@@ -22,16 +22,17 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
   const { auctionState } = useAuctionStatus();
   const [selectedActress, setSelectedActress] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
-  const [customDuration, setCustomDuration] = useState(300); // 5 minutes default
+  const [customDuration, setCustomDuration] = useState(30); // 30 seconds default
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    if (auctionState?.isActive && auctionState?.startTime) {
+    if (auctionState?.isActive && auctionState?.startTime && auctionState?.auctionDuration) {
       const timer = setInterval(() => {
         const now = Date.now();
         const startTime = auctionState.startTime?.toMillis() || now;
         const elapsed = Math.floor((now - startTime) / 1000);
-        const remaining = Math.max(0, customDuration - elapsed);
+        const duration = auctionState.auctionDuration || customDuration;
+        const remaining = Math.max(0, duration - elapsed);
         setTimeLeft(remaining);
         
         if (remaining === 0) {
@@ -72,8 +73,10 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         highestBidderTeam: null,
         highestBidderName: null,
         timeRemaining: customDuration,
+        auctionDuration: customDuration,
         startTime: serverTimestamp(),
-        lastBidTime: null
+        lastBidTime: null,
+        bidCount: 0
       });
 
       // Mark actress as on auction
@@ -84,7 +87,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
 
       toast({
         title: "Auction started",
-        description: `Auction for ${actress.name} has started for ${Math.floor(customDuration / 60)} minutes`,
+        description: `Auction for ${actress.name} has started for ${customDuration} seconds`,
       });
     } catch (error) {
       console.error('Error starting auction:', error);
@@ -126,6 +129,21 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
     }
   };
 
+  const extendAuctionTime = async (additionalSeconds: number) => {
+    try {
+      await updateDoc(doc(db, 'auction', 'current'), {
+        auctionDuration: (auctionState?.auctionDuration || 0) + additionalSeconds
+      });
+
+      toast({
+        title: "Time extended",
+        description: `Added ${additionalSeconds} seconds to the auction`,
+      });
+    } catch (error) {
+      console.error('Error extending auction time:', error);
+    }
+  };
+
   const handleEndAuction = async () => {
     if (!auctionState?.currentItem) return;
 
@@ -150,7 +168,9 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
           highestBidder: null,
           highestBidderTeam: null,
           highestBidderName: null,
-          timeRemaining: 0
+          timeRemaining: 0,
+          auctionDuration: 0,
+          bidCount: 0
         });
 
         // Update actress status
@@ -216,6 +236,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
           actressName={auctionState.currentItem.name}
           timeLeft={timeLeft}
           isActive={auctionState.isActive || false}
+          bidCount={auctionState.bidCount || 0}
         />
       )}
 
@@ -280,7 +301,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {auctionState.isActive ? (
                   <Button onClick={pauseAuction} variant="outline" className="flex items-center gap-2">
                     <Pause className="h-4 w-4" />
@@ -295,6 +316,14 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                 <Button onClick={handleEndAuction} variant="destructive" className="flex items-center gap-2">
                   <Square className="h-4 w-4" />
                   End Auction
+                </Button>
+                <Button onClick={() => extendAuctionTime(10)} variant="outline" className="flex items-center gap-2">
+                  <Timer className="h-4 w-4" />
+                  +10s
+                </Button>
+                <Button onClick={() => extendAuctionTime(30)} variant="outline" className="flex items-center gap-2">
+                  <Timer className="h-4 w-4" />
+                  +30s
                 </Button>
               </div>
             </div>
@@ -334,15 +363,16 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                     id="duration"
                     type="number"
                     value={customDuration}
-                    onChange={(e) => setCustomDuration(parseInt(e.target.value) || 300)}
-                    min="60"
-                    max="1800"
+                    onChange={(e) => setCustomDuration(parseInt(e.target.value) || 30)}
+                    min="10"
+                    max="300"
                     className="flex-1"
                   />
                   <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(30)}>30s</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(60)}>1m</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(120)}>2m</Button>
                     <Button variant="outline" size="sm" onClick={() => setCustomDuration(180)}>3m</Button>
-                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(300)}>5m</Button>
-                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(600)}>10m</Button>
                   </div>
                 </div>
               </div>
@@ -382,7 +412,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
               className="w-full bg-purple-600 hover:bg-purple-700"
             >
               <Play className="h-4 w-4 mr-2" />
-              Start Auction ({Math.floor(customDuration / 60)}:{(customDuration % 60).toString().padStart(2, '0')})
+              Start Auction ({customDuration}s)
             </Button>
           </div>
         </CardContent>

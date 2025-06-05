@@ -42,12 +42,13 @@ const OwnerDashboard: React.FC = () => {
   }, [auctionState?.currentItem]);
 
   useEffect(() => {
-    if (auctionState?.isActive && auctionState?.timeRemaining > 0) {
+    if (auctionState?.isActive && auctionState?.startTime && auctionState?.auctionDuration) {
       const timer = setInterval(() => {
         const now = Date.now();
         const startTime = auctionState.startTime?.toMillis() || now;
         const elapsed = Math.floor((now - startTime) / 1000);
-        const remaining = Math.max(0, 300 - elapsed); // 5 minutes = 300 seconds
+        const duration = auctionState.auctionDuration || 30;
+        const remaining = Math.max(0, duration - elapsed);
         setTimeLeft(remaining);
         
         if (remaining === 0) {
@@ -103,7 +104,7 @@ const OwnerDashboard: React.FC = () => {
       setBidAmount('');
       toast({
         title: "Bid placed successfully",
-        description: `Your bid of ₹${amount.toLocaleString()} has been placed`,
+        description: `Your bid of ₹${amount.toLocaleString()} has been placed! Time extended by 3 seconds.`,
       });
     } catch (error: any) {
       toast({
@@ -185,6 +186,7 @@ const OwnerDashboard: React.FC = () => {
               actressName={auctionState.currentItem.name}
               timeLeft={timeLeft}
               isActive={auctionState.isActive || false}
+              bidCount={auctionState.bidCount || 0}
             />
           </div>
         )}
