@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/ddl.github.io",  // since your repo is named ddl.github.io, serve from root
+  base: "/ddl.github.io/",       // ← IMPORTANT: serve from this subpath
   server: {
     host: "::",
     port: 8080,
