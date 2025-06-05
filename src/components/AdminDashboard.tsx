@@ -209,15 +209,15 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span>Budget:</span>
-                            <span>₹{team.budget.toLocaleString()}</span>
+                            <span>₹{(team.budget || 0).toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Remaining:</span>
-                            <span>₹{team.remainingPurse.toLocaleString()}</span>
+                            <span>₹{(team.remainingPurse || 0).toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Actresses:</span>
-                            <span>{team.currentActresses}/{team.maxActresses}</span>
+                            <span>{team.currentActresses || 0}/{team.maxActresses || 0}</span>
                           </div>
                         </div>
                       </CardContent>
@@ -258,24 +258,31 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold mb-4">Team Budget Analysis</h3>
                     <div className="space-y-3">
-                      {teams.map((team) => (
-                        <div key={team.id} className="border rounded-lg p-3">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium">{team.name}</span>
-                            <span className="text-sm text-gray-500">
-                              {((team.budget - team.remainingPurse) / team.budget * 100).toFixed(1)}% used
-                            </span>
+                      {teams.map((team) => {
+                        const budget = team.budget || 0;
+                        const remainingPurse = team.remainingPurse || 0;
+                        const usedBudget = budget - remainingPurse;
+                        const usagePercentage = budget > 0 ? (usedBudget / budget * 100) : 0;
+                        
+                        return (
+                          <div key={team.id} className="border rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium">{team.name}</span>
+                              <span className="text-sm text-gray-500">
+                                {usagePercentage.toFixed(1)}% used
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-purple-600 h-2 rounded-full" 
+                                style={{ 
+                                  width: `${usagePercentage}%` 
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-purple-600 h-2 rounded-full" 
-                              style={{ 
-                                width: `${((team.budget - team.remainingPurse) / team.budget * 100)}%` 
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   
