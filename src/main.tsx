@@ -5,7 +5,7 @@ import App from "./App.tsx";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter basename="/ddl.github.io/">
+  <BrowserRouter basename="/">
     <App />
   </BrowserRouter>
 );
