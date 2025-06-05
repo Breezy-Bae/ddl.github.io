@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -14,7 +13,9 @@ import AddActressForm from './AddActressForm';
 import UsersTable from './UsersTable';
 import ActressPoolTable from './ActressPoolTable';
 import AuctionControl from './AuctionControl';
-import { Users, UserPlus, Trophy, Star, Gavel, LogOut } from 'lucide-react';
+import { Users, UserPlus, Trophy, Star, Gavel, LogOut, Edit } from 'lucide-react';
+import { formatIndianCurrency } from '@/utils/currencyUtils';
+import EditTeamForm from './EditTeamForm';
 
 const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
@@ -24,6 +25,7 @@ const AdminDashboard: React.FC = () => {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showAddActress, setShowAddActress] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   useEffect(() => {
     const unsubscribeUsers = onSnapshot(
@@ -198,22 +200,31 @@ const AdminDashboard: React.FC = () => {
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-lg">{team.name}</h3>
-                          <Badge variant={team.isActive ? "default" : "secondary"}>
-                            {team.isActive ? "Active" : "Inactive"}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={team.isActive ? "default" : "secondary"}>
+                              {team.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingTeam(team)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span>Owner:</span>
-                            <span>{team.ownerName || 'Unassigned'}</span>
+                            <span className="font-medium">{team.ownerName || 'Unassigned'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Budget:</span>
-                            <span>₹{(team.budget || 0).toLocaleString()}</span>
+                            <span>{formatIndianCurrency(team.budget || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Remaining:</span>
-                            <span>₹{(team.remainingPurse || 0).toLocaleString()}</span>
+                            <span>{formatIndianCurrency(team.remainingPurse || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Actresses:</span>
@@ -271,6 +282,10 @@ const AdminDashboard: React.FC = () => {
                               <span className="text-sm text-gray-500">
                                 {usagePercentage.toFixed(1)}% used
                               </span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-600 mb-2">
+                              <span>Budget: {formatIndianCurrency(budget)}</span>
+                              <span>Remaining: {formatIndianCurrency(remainingPurse)}</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div 
@@ -333,6 +348,13 @@ const AdminDashboard: React.FC = () => {
         <AddActressForm
           isOpen={showAddActress}
           onClose={() => setShowAddActress(false)}
+        />
+      )}
+      {editingTeam && (
+        <EditTeamForm
+          isOpen={!!editingTeam}
+          onClose={() => setEditingTeam(null)}
+          team={editingTeam}
         />
       )}
     </div>

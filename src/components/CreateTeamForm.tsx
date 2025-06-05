@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { formatIndianCurrency } from '@/utils/currencyUtils';
 
 interface CreateTeamFormProps {
   isOpen: boolean;
@@ -44,7 +44,7 @@ const CreateTeamForm: React.FC<CreateTeamFormProps> = ({ isOpen, onClose }) => {
 
       toast({
         title: "Team created successfully",
-        description: `${formData.name} has been created with ₹${budget.toLocaleString()} budget`,
+        description: `${formData.name} has been created with ${formatIndianCurrency(budget)} budget`,
       });
 
       onClose();
@@ -94,6 +94,9 @@ const CreateTeamForm: React.FC<CreateTeamFormProps> = ({ isOpen, onClose }) => {
               min="100000"
               placeholder="1000000"
             />
+            <p className="text-sm text-gray-500 mt-1">
+              {formatIndianCurrency(parseInt(formData.budget) || 0)}
+            </p>
           </div>
 
           <div>

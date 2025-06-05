@@ -1,72 +1,79 @@
+
 import React, { useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
+import { Actress } from '@/types';
 import { formatIndianCurrency } from '@/utils/currencyUtils';
 
-interface AddActressFormProps {
+interface EditActressFormProps {
   isOpen: boolean;
   onClose: () => void;
+  actress: Actress;
 }
 
-const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
+const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actress }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    basePrice: '100000',
-    imageUrl: ''
+    name: actress.name,
+    category: actress.category,
+    basePrice: actress.basePrice.toString(),
+    imageUrl: actress.imageUrl || ''
   });
   const [loading, setLoading] = useState(false);
 
   const categories = [
-    'Marquee',
-    'Blockbuster Queens',
-    'Global Glam',
-    'Drama Diva',
-    'Next-Gen Stars',
-    'Timeless Icons',
-    'Gen-Z'
+    'Marquee', 'Blockbuster Queens', 'Global Glam', 'Drama Diva', 
+    'Next-Gen Stars', 'Timeless Icons', 'Gen-Z'
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const basePrice = parseInt(formData.basePrice);
-
-      await addDoc(collection(db, 'actresses'), {
+      await updateDoc(doc(db, 'actresses', actress.id), {
         name: formData.name,
         category: formData.category,
         basePrice,
         currentPrice: basePrice,
-        imageUrl: formData.imageUrl || 'https://via.placeholder.com/150x200',
-        isAvailable: true,
-        isOnAuction: false,
-        createdAt: serverTimestamp()
+        imageUrl: formData.imageUrl || 'https://via.placeholder.com/150x200'
       });
 
       toast({
-        title: "Actress added successfully",
-        description: `${formData.name} has been added to the ${formData.category} category`,
+        title: "Actress updated successfully",
+        description: `${formData.name} has been updated`,
       });
-
       onClose();
-      setFormData({
-        name: '',
-        category: '',
-        basePrice: '100000',
-        imageUrl: ''
-      });
     } catch (error: any) {
-      console.error('Error adding actress:', error);
       toast({
-        title: "Failed to add actress",
+        title: "Failed to update actress",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, 'actresses', actress.id));
+      toast({
+        title: "Actress deleted successfully",
+        description: `${actress.name} has been removed`,
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete actress",
         description: error.message,
         variant: "destructive",
       });
@@ -79,9 +86,9 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Actress</DialogTitle>
+          <DialogTitle>Edit Actress</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleUpdate} className="space-y-4">
           <div>
             <Label htmlFor="actressName">Actress Name</Label>
             <Input
@@ -89,7 +96,6 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              placeholder="Enter actress name"
             />
           </div>
 
@@ -97,7 +103,7 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
             <Label htmlFor="category">Category</Label>
             <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
@@ -118,7 +124,6 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
               onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
               required
               min="10000"
-              placeholder="100000"
             />
             <p className="text-sm text-gray-500 mt-1">
               {formatIndianCurrency(parseInt(formData.basePrice) || 0)}
@@ -126,26 +131,42 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div>
-            <Label htmlFor="imageUrl">Image URL (Optional)</Label>
+            <Label htmlFor="imageUrl">Image URL</Label>
             <Input
               id="imageUrl"
               type="url"
               value={formData.imageUrl}
               onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://example.com/image.jpg"
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || !formData.name || !formData.category || !formData.basePrice}
-            >
-              {loading ? 'Adding...' : 'Add Actress'}
-            </Button>
+          <DialogFooter className="flex justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive">Delete</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Actress</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete {actress.name}? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                    {loading ? 'Deleting...' : 'Delete'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Updating...' : 'Update'}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -153,4 +174,4 @@ const AddActressForm: React.FC<AddActressFormProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default AddActressForm;
+export default EditActressForm;
