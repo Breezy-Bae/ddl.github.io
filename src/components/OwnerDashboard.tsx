@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,7 +11,8 @@ import { useTeamData } from '@/hooks/useTeamData';
 import { placeBid, validateBid, validateCategoryQuota } from '@/utils/auctionUtils';
 import { CATEGORY_COLORS, CATEGORY_LIMITS, BidHistory } from '@/types';
 import { toast } from '@/hooks/use-toast';
-import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer } from 'lucide-react';
+import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer, TrendingUp } from 'lucide-react';
+import AuctionCallouts from './AuctionCallouts';
 
 const OwnerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -176,6 +176,19 @@ const OwnerDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Auction Callouts for Owners */}
+        {auctionState?.currentItem && (
+          <div className="mb-6">
+            <AuctionCallouts
+              currentBid={auctionState.highestBid || 0}
+              bidderName={auctionState.highestBidderName}
+              actressName={auctionState.currentItem.name}
+              timeLeft={timeLeft}
+              isActive={auctionState.isActive || false}
+            />
+          </div>
+        )}
+
         {/* Team Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -242,35 +255,47 @@ const OwnerDashboard: React.FC = () => {
             <CardContent>
               {auctionState?.isActive && auctionState?.currentItem ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{auctionState.currentItem.name}</h3>
-                      <Badge 
-                        className="mt-1"
-                        style={{ 
-                          backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#gray' 
-                        }}
-                      >
-                        {auctionState.currentItem.category}
-                      </Badge>
+                  {/* Actress Image and Details */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <img
+                        src={auctionState.currentItem.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=200&h=250&fit=crop'}
+                        alt={auctionState.currentItem.name}
+                        className="w-24 h-32 object-cover rounded-lg border-2 border-purple-200"
+                      />
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 text-red-600 font-bold">
-                        <Timer className="h-4 w-4" />
-                        {formatTime(timeLeft)}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h3 className="text-lg font-semibold">{auctionState.currentItem.name}</h3>
+                          <Badge 
+                            className="mt-1"
+                            style={{ 
+                              backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#gray' 
+                            }}
+                          >
+                            {auctionState.currentItem.category}
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <div className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                            <Timer className="h-4 w-4" />
+                            {formatTime(timeLeft)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border-2 border-green-200">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-gray-600">Current Highest Bid:</span>
-                      <span className="text-xl font-bold">₹{(auctionState.highestBid || 0).toLocaleString()}</span>
+                      <span className="text-2xl font-bold text-green-600">₹{(auctionState.highestBid || 0).toLocaleString()}</span>
                     </div>
                     {auctionState.highestBidderName && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Leading Bidder:</span>
-                        <span className="font-medium">{auctionState.highestBidderName}</span>
+                        <span className="font-bold text-purple-600">{auctionState.highestBidderName}</span>
                       </div>
                     )}
                   </div>
@@ -286,9 +311,10 @@ const OwnerDashboard: React.FC = () => {
                     <Button 
                       onClick={handlePlaceBid}
                       disabled={!bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
                     >
-                      Place Bid
+                      <TrendingUp className="h-4 w-4" />
+                      Bid
                     </Button>
                   </div>
 
@@ -392,19 +418,28 @@ const OwnerDashboard: React.FC = () => {
                 {roster.map((actress) => (
                   <Card key={actress.id} className="border">
                     <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{actress.name}</h3>
-                        <Badge 
-                          style={{ 
-                            backgroundColor: CATEGORY_COLORS[actress.category] || '#gray' 
-                          }}
-                        >
-                          {actress.category}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <p>Purchase Price: ₹{(actress.purchasePrice || 0).toLocaleString()}</p>
-                        <p>Base Price: ₹{(actress.basePrice || 0).toLocaleString()}</p>
+                      <div className="flex gap-3">
+                        <img
+                          src={actress.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=80&h=100&fit=crop'}
+                          alt={actress.name}
+                          className="w-12 h-16 object-cover rounded border"
+                        />
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold">{actress.name}</h3>
+                            <Badge 
+                              style={{ 
+                                backgroundColor: CATEGORY_COLORS[actress.category] || '#gray' 
+                              }}
+                            >
+                              {actress.category}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <p>Purchase Price: ₹{(actress.purchasePrice || 0).toLocaleString()}</p>
+                            <p>Base Price: ₹{(actress.basePrice || 0).toLocaleString()}</p>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

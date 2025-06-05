@@ -217,7 +217,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span>Actresses:</span>
-                            <span>{team.currentActresses || 0}/{team.maxActresses || 0}</span>
+                            <span>{(team.currentActresses || 0)}/{(team.maxActresses || 0)}</span>
                           </div>
                         </div>
                       </CardContent>

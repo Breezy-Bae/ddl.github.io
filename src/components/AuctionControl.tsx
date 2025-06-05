@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuctionStatus } from '@/hooks/useAuctionStatus';
 import { Actress } from '@/types';
 import { toast } from '@/hooks/use-toast';
-import { Play, Pause, Square, Timer, Gavel } from 'lucide-react';
+import { Play, Pause, Square, Timer, Gavel, Settings } from 'lucide-react';
+import AuctionCallouts from './AuctionCallouts';
 
 interface AuctionControlProps {
   actresses: Actress[];
@@ -19,6 +22,8 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
   const { auctionState } = useAuctionStatus();
   const [selectedActress, setSelectedActress] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
+  const [customDuration, setCustomDuration] = useState(300); // 5 minutes default
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (auctionState?.isActive && auctionState?.startTime) {
@@ -26,7 +31,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         const now = Date.now();
         const startTime = auctionState.startTime?.toMillis() || now;
         const elapsed = Math.floor((now - startTime) / 1000);
-        const remaining = Math.max(0, 300 - elapsed); // 5 minutes
+        const remaining = Math.max(0, customDuration - elapsed);
         setTimeLeft(remaining);
         
         if (remaining === 0) {
@@ -37,7 +42,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
 
       return () => clearInterval(timer);
     }
-  }, [auctionState]);
+  }, [auctionState, customDuration]);
 
   const startAuction = async () => {
     if (!selectedActress) {
@@ -66,7 +71,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         highestBidder: null,
         highestBidderTeam: null,
         highestBidderName: null,
-        timeRemaining: 300, // 5 minutes
+        timeRemaining: customDuration,
         startTime: serverTimestamp(),
         lastBidTime: null
       });
@@ -79,7 +84,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
 
       toast({
         title: "Auction started",
-        description: `Auction for ${actress.name} has started`,
+        description: `Auction for ${actress.name} has started for ${Math.floor(customDuration / 60)} minutes`,
       });
     } catch (error) {
       console.error('Error starting auction:', error);
@@ -201,8 +206,49 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const pauseAuction = async () => {
+    try {
+      await updateDoc(doc(db, 'auction', 'current'), {
+        isActive: false
+      });
+
+      toast({
+        title: "Auction paused",
+        description: "The auction has been paused",
+      });
+    } catch (error) {
+      console.error('Error pausing auction:', error);
+    }
+  };
+
+  const resumeAuction = async () => {
+    try {
+      await updateDoc(doc(db, 'auction', 'current'), {
+        isActive: true
+      });
+
+      toast({
+        title: "Auction resumed",
+        description: "The auction has been resumed",
+      });
+    } catch (error) {
+      console.error('Error resuming auction:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Auction Callouts */}
+      {auctionState?.currentItem && (
+        <AuctionCallouts
+          currentBid={auctionState.highestBid || 0}
+          bidderName={auctionState.highestBidderName}
+          actressName={auctionState.currentItem.name}
+          timeLeft={timeLeft}
+          isActive={auctionState.isActive || false}
+        />
+      )}
+
       {/* Current Auction Status */}
       <Card>
         <CardHeader>
@@ -214,38 +260,52 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         <CardContent>
           {auctionState?.currentItem ? (
             <div className="space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold">{auctionState.currentItem.name}</h3>
-                  <Badge variant="secondary" className="mt-1">
-                    {auctionState.currentItem.category}
-                  </Badge>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Base Price: ₹{auctionState.currentItem.basePrice.toLocaleString()}
-                  </p>
+              <div className="flex gap-6">
+                {/* Actress Image */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={auctionState.currentItem.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=600&fit=crop'}
+                    alt={auctionState.currentItem.name}
+                    className="w-32 h-48 object-cover rounded-lg border-4 border-purple-200"
+                  />
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-red-600 font-bold text-xl">
-                    <Timer className="h-5 w-5" />
-                    {formatTime(timeLeft)}
+                
+                {/* Auction Details */}
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-2xl font-bold">{auctionState.currentItem.name}</h3>
+                      <Badge variant="secondary" className="mt-1 text-lg px-3 py-1">
+                        {auctionState.currentItem.category}
+                      </Badge>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Base Price: ₹{auctionState.currentItem.basePrice.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className={`flex items-center gap-2 font-bold text-2xl ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                        <Timer className="h-6 w-6" />
+                        {formatTime(timeLeft)}
+                      </div>
+                      <Badge variant={auctionState.isActive ? "default" : "secondary"} className="mt-2">
+                        {auctionState.isActive ? "Active" : "Paused"}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={auctionState.isActive ? "default" : "secondary"} className="mt-2">
-                    {auctionState.isActive ? "Active" : "Paused"}
-                  </Badge>
-                </div>
-              </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Current Highest Bid</p>
-                    <p className="text-2xl font-bold">₹{auctionState.highestBid.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Leading Bidder</p>
-                    <p className="text-lg font-medium">
-                      {auctionState.highestBidderName || 'No bids yet'}
-                    </p>
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg border-2 border-yellow-200">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Current Highest Bid</p>
+                        <p className="text-3xl font-bold text-green-600">₹{(auctionState.highestBid || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Leading Bidder</p>
+                        <p className="text-xl font-bold text-purple-600">
+                          {auctionState.highestBidderName || 'No bids yet'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -281,10 +341,43 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
       {/* Start New Auction */}
       <Card>
         <CardHeader>
-          <CardTitle>Start New Auction</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Start New Auction</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {showSettings && (
+              <div className="bg-gray-50 p-4 rounded-lg border">
+                <Label htmlFor="duration" className="text-sm font-medium">Auction Duration (seconds)</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="duration"
+                    type="number"
+                    value={customDuration}
+                    onChange={(e) => setCustomDuration(parseInt(e.target.value) || 300)}
+                    min="60"
+                    max="1800"
+                    className="flex-1"
+                  />
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(180)}>3m</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(300)}>5m</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCustomDuration(600)}>10m</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium">Select Actress to Auction</label>
               <Select value={selectedActress} onValueChange={setSelectedActress}>
@@ -294,11 +387,18 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                 <SelectContent>
                   {actresses.map((actress) => (
                     <SelectItem key={actress.id} value={actress.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{actress.name}</span>
-                        <Badge variant="outline" className="ml-2">
-                          {actress.category}
-                        </Badge>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={actress.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=60&h=60&fit=crop'}
+                          alt={actress.name}
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                        <div className="flex items-center justify-between w-full">
+                          <span>{actress.name}</span>
+                          <Badge variant="outline" className="ml-2">
+                            {actress.category}
+                          </Badge>
+                        </div>
                       </div>
                     </SelectItem>
                   ))}
@@ -312,7 +412,7 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
               className="w-full bg-purple-600 hover:bg-purple-700"
             >
               <Play className="h-4 w-4 mr-2" />
-              Start Auction (5 minutes)
+              Start Auction ({Math.floor(customDuration / 60)}:{(customDuration % 60).toString().padStart(2, '0')})
             </Button>
           </div>
         </CardContent>
@@ -334,20 +434,29 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                 onClick={() => setSelectedActress(actress.id)}
               >
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold">{actress.name}</h3>
-                    <Badge variant="outline">
-                      {actress.category}
-                    </Badge>
+                  <div className="flex gap-3">
+                    <img
+                      src={actress.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=100&h=120&fit=crop'}
+                      alt={actress.name}
+                      className="w-16 h-20 object-cover rounded border"
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold">{actress.name}</h3>
+                        <Badge variant="outline">
+                          {actress.category}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Base Price: ₹{actress.basePrice.toLocaleString()}
+                      </p>
+                      {actress.isOnAuction && (
+                        <Badge variant="destructive" className="mt-2">
+                          Currently on Auction
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    Base Price: ₹{actress.basePrice.toLocaleString()}
-                  </p>
-                  {actress.isOnAuction && (
-                    <Badge variant="destructive" className="mt-2">
-                      Currently on Auction
-                    </Badge>
-                  )}
                 </CardContent>
               </Card>
             ))}
