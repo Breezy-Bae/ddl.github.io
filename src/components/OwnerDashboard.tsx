@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -16,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer, TrendingUp, IndianRupee } from 'lucide-react';
 import AuctionCallouts from './AuctionCallouts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import CategoryStatus from './CategoryStatus';
 
 const OwnerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -132,16 +132,14 @@ const OwnerDashboard: React.FC = () => {
 
   // Calculate bid increments based on the current bid
   const getBidIncrements = (currentBid: number) => {
-    if (currentBid < 100000) { // < 1 Lakh
-      return [10000, 25000, 50000]; // 10k, 25k, 50k
-    } else if (currentBid < 1000000) { // < 10 Lakhs
-      return [100000, 200000, 500000]; // 1L, 2L, 5L
-    } else if (currentBid < 5000000) { // < 50 Lakhs
-      return [200000, 500000, 1000000]; // 2L, 5L, 10L
-    } else if (currentBid < 10000000) { // < 1 Cr
-      return [500000, 1000000, 2000000]; // 5L, 10L, 20L
-    } else {
+    if (currentBid < 10000000) { // < 1 Cr
       return [1000000, 2000000, 5000000]; // 10L, 20L, 50L
+    } else if (currentBid < 50000000) { // 1-5 Cr
+      return [2000000, 5000000, 10000000]; // 20L, 50L, 1Cr
+    } else if (currentBid < 100000000) { // 5-10 Cr
+      return [5000000, 10000000, 20000000]; // 50L, 1Cr, 2Cr
+    } else {
+      return [5000000, 10000000, 20000000]; // 50L, 1Cr, 2Cr (10+ Cr)
     }
   };
 
@@ -175,29 +173,29 @@ const OwnerDashboard: React.FC = () => {
   }
 
   const teamStyle = {
-    backgroundColor: team.primaryColor || 'white',
-    color: team.secondaryColor || 'black',
+    backgroundColor: team.primaryColor || '#667eea',
+    color: team.secondaryColor || 'white',
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="royal-header shadow-lg border-b border-purple-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 
-                className="text-2xl font-bold px-3 py-1 rounded" 
+                className="text-2xl font-bold px-4 py-2 rounded-lg shadow-lg" 
                 style={teamStyle}
               >
                 {team ? `${team.name} Dashboard` : 'Team Dashboard'}
               </h1>
-              <p className="text-gray-600">Diva Draft League</p>
+              <p className="text-white mt-1 font-medium">Diva Draft League</p>
             </div>
             <Button 
               onClick={logout}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 glass-effect text-white border-white hover:bg-white hover:text-purple-900"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -211,67 +209,60 @@ const OwnerDashboard: React.FC = () => {
           <>
             {/* Team Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <IndianRupee className="h-8 w-8 text-green-600" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Remaining Budget</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatIndianCurrency(team.remainingPurse || 0)}
-                      </p>
-                    </div>
+              <div className="premium-card p-6 rounded-xl">
+                <div className="flex items-center">
+                  <IndianRupee className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Remaining Budget</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatIndianCurrency(team.remainingPurse || 0)}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <Star className="h-8 w-8 text-pink-600" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Actresses</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {roster.length}/{team.maxActresses}
-                      </p>
-                    </div>
+              <div className="premium-card p-6 rounded-xl">
+                <div className="flex items-center">
+                  <Star className="h-8 w-8 text-pink-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Actresses</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {roster.length}/{team.maxActresses}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-8 w-8 text-blue-600" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatIndianCurrency((team.budget || 0) - (team.remainingPurse || 0))}
-                      </p>
-                    </div>
+              <div className="premium-card p-6 rounded-xl">
+                <div className="flex items-center">
+                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatIndianCurrency((team.budget || 0) - (team.remainingPurse || 0))}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <Users className="h-8 w-8 text-purple-600" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Available Slots</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {(team.maxActresses || 0) - roster.length}
-                      </p>
-                    </div>
+              <div className="premium-card p-6 rounded-xl">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Available Slots</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(team.maxActresses || 0) - roster.length}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             <Tabs defaultValue="auction" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="auction">Live Auction</TabsTrigger>
-                <TabsTrigger value="roster">My Roster</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 glass-effect">
+                <TabsTrigger value="auction" className="text-purple-800">Live Auction</TabsTrigger>
+                <TabsTrigger value="roster" className="text-purple-800">My Roster</TabsTrigger>
+                <TabsTrigger value="categories" className="text-purple-800">Category Status</TabsTrigger>
               </TabsList>
 
               <TabsContent value="auction">
@@ -291,34 +282,34 @@ const OwnerDashboard: React.FC = () => {
                 )}
 
                 {/* Current Auction */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                <div className="premium-card rounded-xl">
+                  <div className="p-6 border-b border-purple-100">
+                    <h2 className="text-xl font-bold text-purple-800 flex items-center gap-2">
                       <Gavel className="h-5 w-5" />
                       Current Auction
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                    </h2>
+                  </div>
+                  <div className="p-6">
                     {auctionState?.currentItem ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {/* Actress Image and Details */}
-                        <div className="flex gap-4">
+                        <div className="flex gap-6">
                           <div className="flex-shrink-0">
                             <img
                               src={auctionState.currentItem.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=200&h=250&fit=crop'}
                               alt={auctionState.currentItem.name}
-                              className="w-24 h-32 object-cover rounded-lg border-2"
+                              className="w-32 h-40 object-cover rounded-xl border-4 shadow-lg"
                               style={{ 
                                 borderColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'purple' 
                               }}
                             />
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center justify-between mb-4">
                               <div>
-                                <h3 className="text-lg font-semibold">{auctionState.currentItem.name}</h3>
+                                <h3 className="text-2xl font-bold text-gray-900">{auctionState.currentItem.name}</h3>
                                 <Badge 
-                                  className="mt-1 text-white"
+                                  className="mt-2 text-white px-3 py-1 text-sm"
                                   style={{ 
                                     backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'gray' 
                                   }}
@@ -327,8 +318,8 @@ const OwnerDashboard: React.FC = () => {
                                 </Badge>
                               </div>
                               <div className="text-right">
-                                <div className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
-                                  <Timer className="h-4 w-4" />
+                                <div className={`flex items-center gap-2 font-bold text-2xl ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                                  <Timer className="h-6 w-6" />
                                   {formatTime(timeLeft)}
                                 </div>
                               </div>
@@ -338,11 +329,20 @@ const OwnerDashboard: React.FC = () => {
 
                         {/* Active Participating Teams */}
                         {auctionState.activeTeams && auctionState.activeTeams.length > 0 && (
-                          <div className="bg-gray-50 p-3 rounded border mb-3">
-                            <p className="text-sm font-medium mb-2">Participating Teams:</p>
+                          <div className="glass-effect p-4 rounded-lg border-l-4 border-purple-500">
+                            <p className="font-medium mb-3 text-purple-800">Participating Teams:</p>
                             <div className="flex flex-wrap gap-2">
                               {auctionState.activeTeams.map(activeTeam => (
-                                <Badge key={activeTeam.id} variant="outline" className="px-3 py-1">
+                                <Badge 
+                                  key={activeTeam.id} 
+                                  variant="outline" 
+                                  className="px-3 py-1 border-2"
+                                  style={{
+                                    borderColor: activeTeam.primaryColor || '#e5e7eb',
+                                    backgroundColor: activeTeam.primaryColor || 'white',
+                                    color: activeTeam.secondaryColor || 'black'
+                                  }}
+                                >
                                   {activeTeam.name} ({activeTeam.ownerName})
                                 </Badge>
                               ))}
@@ -350,15 +350,15 @@ const OwnerDashboard: React.FC = () => {
                           </div>
                         )}
 
-                        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border-2 border-green-200">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-gray-600">Current Highest Bid:</span>
-                            <span className="text-2xl font-bold text-green-600">{formatIndianCurrency(auctionState.highestBid || 0)}</span>
+                        <div className="royal-gradient p-6 rounded-xl border-2 border-yellow-400 shadow-lg">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-white font-medium">Current Highest Bid:</span>
+                            <span className="text-3xl font-bold text-yellow-300">{formatIndianCurrency(auctionState.highestBid || 0)}</span>
                           </div>
                           {auctionState.highestBidderName && (
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Leading Bidder:</span>
-                              <span className="font-bold text-purple-600">
+                              <span className="text-white font-medium">Leading Bidder:</span>
+                              <span className="font-bold text-yellow-300">
                                 {auctionState.highestBidderName} 
                                 {auctionState.highestBidderTeam && (
                                   <span className="text-sm ml-1 opacity-80">
@@ -370,22 +370,23 @@ const OwnerDashboard: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                           <Input
                             type="number"
                             placeholder="Enter bid amount"
                             value={bidAmount}
                             onChange={(e) => setBidAmount(e.target.value)}
-                            className="flex-1"
+                            className="flex-1 border-2 border-purple-300 focus:border-purple-500"
                             disabled={!auctionState.isActive}
+                            min={(auctionState.highestBid || 0) === 0 ? auctionState.currentItem.basePrice : (auctionState.highestBid || 0) + 1}
                           />
                           <Button 
                             onClick={handlePlaceBid}
                             disabled={!auctionState.isActive || !bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
-                            className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
+                            className="px-6 py-2 text-white font-bold shadow-lg"
                             style={teamStyle}
                           >
-                            <TrendingUp className="h-4 w-4" />
+                            <TrendingUp className="h-4 w-4 mr-2" />
                             Bid
                           </Button>
                         </div>
@@ -393,96 +394,119 @@ const OwnerDashboard: React.FC = () => {
                         {/* Quick bid buttons */}
                         {auctionState.isActive && (
                           <div className="flex gap-2 flex-wrap">
-                            {getBidIncrements(auctionState.highestBid || 0).map((increment) => (
+                            {(auctionState.highestBid || 0) === 0 ? (
                               <Button
-                                key={increment}
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setBidAmount(((auctionState.highestBid || 0) + increment).toString())}
-                                disabled={(auctionState.highestBid || 0) + increment > (team.remainingPurse || 0)}
+                                onClick={() => setBidAmount(auctionState.currentItem.basePrice.toString())}
+                                disabled={auctionState.currentItem.basePrice > (team.remainingPurse || 0)}
+                                className="border-green-500 text-green-600 hover:bg-green-50"
                               >
-                                +{formatIndianCurrency(increment)}
+                                Base Price: {formatIndianCurrency(auctionState.currentItem.basePrice)}
                               </Button>
-                            ))}
+                            ) : (
+                              getBidIncrements(auctionState.highestBid || 0).map((increment) => (
+                                <Button
+                                  key={increment}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setBidAmount(((auctionState.highestBid || 0) + increment).toString())}
+                                  disabled={(auctionState.highestBid || 0) + increment > (team.remainingPurse || 0)}
+                                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                                >
+                                  +{formatIndianCurrency(increment)}
+                                </Button>
+                              ))
+                            )}
                           </div>
                         )}
 
                         {/* Recent bids */}
-                        <div>
-                          <h4 className="font-medium mb-2">Recent Bids</h4>
-                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                        <div className="glass-effect p-4 rounded-lg">
+                          <h4 className="font-medium mb-3 text-purple-800">Recent Bids</h4>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {bidHistory.map((bid) => (
-                              <div key={bid.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
+                              <div key={bid.id} className="flex justify-between items-center text-sm bg-white p-3 rounded-lg border shadow-sm">
                                 <span className="font-medium">
                                   {bid.bidderName}
                                   <span className="text-xs text-gray-500 ml-1">({bid.teamName})</span>
                                 </span>
-                                <span>{formatIndianCurrency(bid.amount || 0)}</span>
+                                <span className="font-bold text-green-600">{formatIndianCurrency(bid.amount || 0)}</span>
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Gavel className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p>No active auction at the moment</p>
+                      <div className="text-center py-12 text-gray-500">
+                        <Gavel className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">No active auction at the moment</p>
                         <p className="text-sm">Check back later for upcoming auctions</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="roster">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>My Team Roster</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <div className="premium-card rounded-xl">
+                  <div className="p-6 border-b border-purple-100">
+                    <h2 className="text-xl font-bold text-purple-800">My Team Roster</h2>
+                  </div>
+                  <div className="p-6">
                     {roster.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {roster.map((actress) => (
-                          <Card key={actress.id} className="border" style={{ backgroundColor: team.primaryColor || 'white' }}>
-                            <CardContent className="p-4">
-                              <div className="flex items-center space-x-4">
-                                <img 
-                                  src={actress.imageUrl || 'https://via.placeholder.com/80x100'} 
-                                  alt={actress.name}
-                                  className="w-16 h-20 object-cover rounded"
-                                />
-                                <div className="flex-1">
-                                  <h3 className="font-semibold" style={{ color: team.secondaryColor || 'black' }}>
-                                    {actress.name}
-                                  </h3>
-                                  <Badge 
-                                    className="text-white mt-1"
-                                    style={{ 
-                                      backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || 'gray' 
-                                    }}
-                                  >
-                                    {actress.category}
-                                  </Badge>
-                                  <p className="text-sm font-medium text-green-600 mt-1">
-                                    {formatIndianCurrency(actress.finalPrice || actress.currentPrice)}
-                                  </p>
-                                </div>
+                          <div 
+                            key={actress.id} 
+                            className="premium-card rounded-lg p-4 border-l-4"
+                            style={{ 
+                              borderLeftColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS],
+                              backgroundColor: team.primaryColor || 'white' 
+                            }}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src={actress.imageUrl || 'https://via.placeholder.com/80x100'} 
+                                alt={actress.name}
+                                className="w-16 h-20 object-cover rounded-lg border-2"
+                                style={{ borderColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] }}
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-semibold" style={{ color: team.secondaryColor || 'black' }}>
+                                  {actress.name}
+                                </h3>
+                                <Badge 
+                                  className="text-white mt-1"
+                                  style={{ 
+                                    backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || 'gray' 
+                                  }}
+                                >
+                                  {actress.category}
+                                </Badge>
+                                <p className="text-sm font-medium text-green-600 mt-1">
+                                  {formatIndianCurrency(actress.finalPrice || actress.currentPrice)}
+                                </p>
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <Star className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">No actresses yet</h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                      <div className="text-center py-12">
+                        <Star className="mx-auto h-16 w-16 text-gray-400" />
+                        <h3 className="mt-4 text-lg font-medium text-gray-900">No actresses yet</h3>
+                        <p className="mt-2 text-gray-500">
                           Start bidding in the auction to build your team!
                         </p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="categories">
+                <CategoryStatus roster={roster} maxActresses={team.maxActresses || 0} />
               </TabsContent>
             </Tabs>
           </>
