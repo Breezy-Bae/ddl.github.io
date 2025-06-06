@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -94,7 +93,7 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
           const teamDoc = await transaction.get(teamRef);
           
           if (teamDoc.exists()) {
-            const teamData = teamDoc.data();
+            const teamData = teamDoc.data() as any;
             
             // Update team's remaining purse and actress count
             transaction.update(teamRef, {

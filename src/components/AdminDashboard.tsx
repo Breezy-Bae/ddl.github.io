@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Team, Actress } from '@/types';
+import { User, Team, Actress, CATEGORY_COLORS } from '@/types';
 import CreateUserForm from './CreateUserForm';
 import CreateTeamForm from './CreateTeamForm';
 import AddActressForm from './AddActressForm';
