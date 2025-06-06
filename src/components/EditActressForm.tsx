@@ -27,7 +27,7 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
   });
   const [loading, setLoading] = useState(false);
 
-  const categories = [
+  const categories: Array<'Marquee' | 'Blockbuster Queens' | 'Global Glam' | 'Drama Diva' | 'Next-Gen Stars' | 'Timeless Icons' | 'Gen-Z'> = [
     'Marquee', 'Blockbuster Queens', 'Global Glam', 'Drama Diva', 
     'Next-Gen Stars', 'Timeless Icons', 'Gen-Z'
   ];
@@ -101,7 +101,7 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
 
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+            <Select value={formData.category} onValueChange={(value: typeof formData.category) => setFormData({ ...formData, category: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

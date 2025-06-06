@@ -53,6 +53,8 @@ export interface AuctionState {
   highestBidderTeam: string | null;
   highestBidderName: string | null;
   timeRemaining: number;
+  auctionDuration: number;
+  bidCount: number;
   startTime: any;
   lastBidTime: any;
 }

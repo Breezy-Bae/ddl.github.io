@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -10,6 +11,7 @@ import { useAuctionStatus } from '@/hooks/useAuctionStatus';
 import { useTeamData } from '@/hooks/useTeamData';
 import { placeBid, validateBid, validateCategoryQuota } from '@/utils/auctionUtils';
 import { CATEGORY_COLORS, CATEGORY_LIMITS, BidHistory } from '@/types';
+import { formatIndianCurrency } from '@/utils/currencyUtils';
 import { toast } from '@/hooks/use-toast';
 import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer, TrendingUp, IndianRupee } from 'lucide-react';
 import AuctionCallouts from './AuctionCallouts';
