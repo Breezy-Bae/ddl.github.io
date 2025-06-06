@@ -90,28 +90,95 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-foreground min-h-screen;
+    background: linear-gradient(135deg, #96031a 0%, #1b1b1e 25%, #6d676e 50%, #1b1b1e 75%, #96031a 100%);
+    background-size: 400% 400%;
+    animation: gradientFlow 15s ease infinite;
+    @apply text-foreground min-h-screen;
     background-attachment: fixed;
   }
 
+  @keyframes gradientFlow {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
   .royal-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #96031a 0%, #1b1b1e 100%);
   }
 
   .premium-card {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(251, 255, 254, 0.95);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+    border: 1px solid #6d676e;
+    box-shadow: 0 8px 32px rgba(150, 3, 26, 0.15);
   }
 
   .glass-effect {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(251, 255, 254, 0.25);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(250, 169, 22, 0.3);
+    box-shadow: 0 4px 16px rgba(150, 3, 26, 0.1);
   }
 
   .royal-header {
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    background: linear-gradient(135deg, #96031a 0%, #1b1b1e 100%);
   }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #6d676e;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #96031a;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #faa916;
+  }
+
+  /* Button fixes for white-on-white */
+  .btn-primary {
+    background-color: #96031a;
+    color: #fbfffe;
+    border: 1px solid #96031a;
+  }
+
+  .btn-primary:hover {
+    background-color: #1b1b1e;
+    color: #fbfffe;
+    border: 1px solid #1b1b1e;
+  }
+
+  .btn-secondary {
+    background-color: #faa916;
+    color: #1b1b1e;
+    border: 1px solid #faa916;
+  }
+
+  .btn-secondary:hover {
+    background-color: #6d676e;
+    color: #fbfffe;
+    border: 1px solid #6d676e;
+  }
+
+  /* Accent colors */
+  .accent-primary { color: #96031a; }
+  .accent-secondary { color: #faa916; }
+  .accent-neutral { color: #6d676e; }
+  .bg-accent-primary { background-color: #96031a; }
+  .bg-accent-secondary { background-color: #faa916; }
+  .bg-accent-neutral { background-color: #6d676e; }
 }

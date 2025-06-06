@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -146,10 +147,10 @@ const OwnerDashboard: React.FC = () => {
   // Show loading state while data is being fetched
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#96031a] mx-auto mb-4"></div>
+          <p className="text-[#fbfffe]">Loading...</p>
         </div>
       </div>
     );
@@ -157,13 +158,13 @@ const OwnerDashboard: React.FC = () => {
 
   if (!team) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md bg-[#fbfffe] border-[#96031a]">
           <CardContent className="p-6 text-center">
-            <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">No Team Assigned</h2>
-            <p className="text-gray-600">You haven't been assigned to a team yet. Please contact the admin.</p>
-            <Button onClick={logout} className="mt-4">
+            <Trophy className="h-12 w-12 text-[#6d676e] mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2 text-[#1b1b1e]">No Team Assigned</h2>
+            <p className="text-[#6d676e]">You haven't been assigned to a team yet. Please contact the admin.</p>
+            <Button onClick={logout} className="mt-4 bg-[#96031a] hover:bg-[#96031a]/90 text-[#fbfffe]">
               Logout
             </Button>
           </CardContent>
@@ -173,14 +174,14 @@ const OwnerDashboard: React.FC = () => {
   }
 
   const teamStyle = {
-    backgroundColor: team.primaryColor || '#667eea',
-    color: team.secondaryColor || 'white',
+    backgroundColor: team.primaryColor || '#96031a',
+    color: team.secondaryColor || '#fbfffe',
   };
 
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="royal-header shadow-lg border-b border-purple-200">
+      <div className="bg-gradient-to-r from-[#96031a] to-[#1b1b1e] shadow-lg border-b border-[#6d676e]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
@@ -190,12 +191,12 @@ const OwnerDashboard: React.FC = () => {
               >
                 {team ? `${team.name} Dashboard` : 'Team Dashboard'}
               </h1>
-              <p className="text-white mt-1 font-medium">Diva Draft League</p>
+              <p className="text-[#fbfffe] mt-1 font-medium">Diva Draft League</p>
             </div>
             <Button 
               onClick={logout}
               variant="outline"
-              className="flex items-center gap-2 glass-effect text-white border-white hover:bg-white hover:text-purple-900"
+              className="flex items-center gap-2 bg-transparent text-[#fbfffe] border-[#fbfffe] hover:bg-[#fbfffe] hover:text-[#96031a]"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -209,48 +210,48 @@ const OwnerDashboard: React.FC = () => {
           <>
             {/* Team Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="premium-card p-6 rounded-xl">
+              <div className="bg-[#fbfffe] p-6 rounded-xl shadow-lg border border-[#6d676e]">
                 <div className="flex items-center">
-                  <IndianRupee className="h-8 w-8 text-green-600" />
+                  <IndianRupee className="h-8 w-8 text-[#faa916]" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Remaining Budget</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-sm font-medium text-[#6d676e]">Remaining Budget</p>
+                    <p className="text-2xl font-bold text-[#1b1b1e]">
                       {formatIndianCurrency(team.remainingPurse || 0)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="premium-card p-6 rounded-xl">
+              <div className="bg-[#fbfffe] p-6 rounded-xl shadow-lg border border-[#6d676e]">
                 <div className="flex items-center">
-                  <Star className="h-8 w-8 text-pink-600" />
+                  <Star className="h-8 w-8 text-[#96031a]" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Actresses</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-sm font-medium text-[#6d676e]">Actresses</p>
+                    <p className="text-2xl font-bold text-[#1b1b1e]">
                       {roster.length}/{team.maxActresses}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="premium-card p-6 rounded-xl">
+              <div className="bg-[#fbfffe] p-6 rounded-xl shadow-lg border border-[#6d676e]">
                 <div className="flex items-center">
-                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                  <TrendingUp className="h-8 w-8 text-[#faa916]" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-sm font-medium text-[#6d676e]">Total Spent</p>
+                    <p className="text-2xl font-bold text-[#1b1b1e]">
                       {formatIndianCurrency((team.budget || 0) - (team.remainingPurse || 0))}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="premium-card p-6 rounded-xl">
+              <div className="bg-[#fbfffe] p-6 rounded-xl shadow-lg border border-[#6d676e]">
                 <div className="flex items-center">
-                  <Users className="h-8 w-8 text-purple-600" />
+                  <Users className="h-8 w-8 text-[#96031a]" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Available Slots</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-sm font-medium text-[#6d676e]">Available Slots</p>
+                    <p className="text-2xl font-bold text-[#1b1b1e]">
                       {(team.maxActresses || 0) - roster.length}
                     </p>
                   </div>
@@ -259,10 +260,10 @@ const OwnerDashboard: React.FC = () => {
             </div>
 
             <Tabs defaultValue="auction" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 glass-effect">
-                <TabsTrigger value="auction" className="text-purple-800">Live Auction</TabsTrigger>
-                <TabsTrigger value="roster" className="text-purple-800">My Roster</TabsTrigger>
-                <TabsTrigger value="categories" className="text-purple-800">Category Status</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 bg-[#fbfffe] border border-[#6d676e]">
+                <TabsTrigger value="auction" className="text-[#1b1b1e] data-[state=active]:bg-[#96031a] data-[state=active]:text-[#fbfffe]">Live Auction</TabsTrigger>
+                <TabsTrigger value="roster" className="text-[#1b1b1e] data-[state=active]:bg-[#96031a] data-[state=active]:text-[#fbfffe]">My Roster</TabsTrigger>
+                <TabsTrigger value="categories" className="text-[#1b1b1e] data-[state=active]:bg-[#96031a] data-[state=active]:text-[#fbfffe]">Category Status</TabsTrigger>
               </TabsList>
 
               <TabsContent value="auction">
@@ -282,9 +283,9 @@ const OwnerDashboard: React.FC = () => {
                 )}
 
                 {/* Current Auction */}
-                <div className="premium-card rounded-xl">
-                  <div className="p-6 border-b border-purple-100">
-                    <h2 className="text-xl font-bold text-purple-800 flex items-center gap-2">
+                <div className="bg-[#fbfffe] rounded-xl shadow-lg border border-[#6d676e]">
+                  <div className="p-6 border-b border-[#6d676e]">
+                    <h2 className="text-xl font-bold text-[#1b1b1e] flex items-center gap-2">
                       <Gavel className="h-5 w-5" />
                       Current Auction
                     </h2>
@@ -300,25 +301,25 @@ const OwnerDashboard: React.FC = () => {
                               alt={auctionState.currentItem.name}
                               className="w-32 h-40 object-cover rounded-xl border-4 shadow-lg"
                               style={{ 
-                                borderColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'purple' 
+                                borderColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#96031a' 
                               }}
                             />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-4">
                               <div>
-                                <h3 className="text-2xl font-bold text-gray-900">{auctionState.currentItem.name}</h3>
+                                <h3 className="text-2xl font-bold text-[#1b1b1e]">{auctionState.currentItem.name}</h3>
                                 <Badge 
                                   className="mt-2 text-white px-3 py-1 text-sm"
                                   style={{ 
-                                    backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'gray' 
+                                    backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#96031a' 
                                   }}
                                 >
                                   {auctionState.currentItem.category}
                                 </Badge>
                               </div>
                               <div className="text-right">
-                                <div className={`flex items-center gap-2 font-bold text-2xl ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                                <div className={`flex items-center gap-2 font-bold text-2xl ${timeLeft <= 10 ? 'text-[#96031a] animate-pulse' : 'text-[#faa916]'}`}>
                                   <Timer className="h-6 w-6" />
                                   {formatTime(timeLeft)}
                                 </div>
@@ -329,8 +330,8 @@ const OwnerDashboard: React.FC = () => {
 
                         {/* Active Participating Teams */}
                         {auctionState.activeTeams && auctionState.activeTeams.length > 0 && (
-                          <div className="glass-effect p-4 rounded-lg border-l-4 border-purple-500">
-                            <p className="font-medium mb-3 text-purple-800">Participating Teams:</p>
+                          <div className="bg-gradient-to-r from-[#6d676e]/20 to-[#faa916]/20 p-4 rounded-lg border-l-4 border-[#96031a]">
+                            <p className="font-medium mb-3 text-[#1b1b1e]">Participating Teams:</p>
                             <div className="flex flex-wrap gap-2">
                               {auctionState.activeTeams.map(activeTeam => (
                                 <Badge 
@@ -338,9 +339,9 @@ const OwnerDashboard: React.FC = () => {
                                   variant="outline" 
                                   className="px-3 py-1 border-2"
                                   style={{
-                                    borderColor: activeTeam.primaryColor || '#e5e7eb',
-                                    backgroundColor: activeTeam.primaryColor || 'white',
-                                    color: activeTeam.secondaryColor || 'black'
+                                    borderColor: activeTeam.primaryColor || '#6d676e',
+                                    backgroundColor: activeTeam.primaryColor || '#fbfffe',
+                                    color: activeTeam.secondaryColor || '#1b1b1e'
                                   }}
                                 >
                                   {activeTeam.name} ({activeTeam.ownerName})
@@ -350,15 +351,15 @@ const OwnerDashboard: React.FC = () => {
                           </div>
                         )}
 
-                        <div className="royal-gradient p-6 rounded-xl border-2 border-yellow-400 shadow-lg">
+                        <div className="bg-gradient-to-r from-[#96031a] to-[#1b1b1e] p-6 rounded-xl border-2 border-[#faa916] shadow-lg">
                           <div className="flex justify-between items-center mb-3">
-                            <span className="text-white font-medium">Current Highest Bid:</span>
-                            <span className="text-3xl font-bold text-yellow-300">{formatIndianCurrency(auctionState.highestBid || 0)}</span>
+                            <span className="text-[#fbfffe] font-medium">Current Highest Bid:</span>
+                            <span className="text-3xl font-bold text-[#faa916]">{formatIndianCurrency(auctionState.highestBid || 0)}</span>
                           </div>
                           {auctionState.highestBidderName && (
                             <div className="flex justify-between items-center">
-                              <span className="text-white font-medium">Leading Bidder:</span>
-                              <span className="font-bold text-yellow-300">
+                              <span className="text-[#fbfffe] font-medium">Leading Bidder:</span>
+                              <span className="font-bold text-[#faa916]">
                                 {auctionState.highestBidderName} 
                                 {auctionState.highestBidderTeam && (
                                   <span className="text-sm ml-1 opacity-80">
@@ -376,14 +377,14 @@ const OwnerDashboard: React.FC = () => {
                             placeholder="Enter bid amount"
                             value={bidAmount}
                             onChange={(e) => setBidAmount(e.target.value)}
-                            className="flex-1 border-2 border-purple-300 focus:border-purple-500"
+                            className="flex-1 border-2 border-[#96031a] focus:border-[#faa916] bg-[#fbfffe] text-[#1b1b1e]"
                             disabled={!auctionState.isActive}
                             min={(auctionState.highestBid || 0) === 0 ? auctionState.currentItem.basePrice : (auctionState.highestBid || 0) + 1}
                           />
                           <Button 
                             onClick={handlePlaceBid}
                             disabled={!auctionState.isActive || !bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
-                            className="px-6 py-2 text-white font-bold shadow-lg"
+                            className="px-6 py-2 font-bold shadow-lg"
                             style={teamStyle}
                           >
                             <TrendingUp className="h-4 w-4 mr-2" />
@@ -400,7 +401,7 @@ const OwnerDashboard: React.FC = () => {
                                 size="sm"
                                 onClick={() => setBidAmount(auctionState.currentItem.basePrice.toString())}
                                 disabled={auctionState.currentItem.basePrice > (team.remainingPurse || 0)}
-                                className="border-green-500 text-green-600 hover:bg-green-50"
+                                className="border-[#faa916] text-[#faa916] hover:bg-[#faa916] hover:text-[#fbfffe] bg-[#fbfffe]"
                               >
                                 Base Price: {formatIndianCurrency(auctionState.currentItem.basePrice)}
                               </Button>
@@ -412,7 +413,7 @@ const OwnerDashboard: React.FC = () => {
                                   size="sm"
                                   onClick={() => setBidAmount(((auctionState.highestBid || 0) + increment).toString())}
                                   disabled={(auctionState.highestBid || 0) + increment > (team.remainingPurse || 0)}
-                                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                                  className="border-[#96031a] text-[#96031a] hover:bg-[#96031a] hover:text-[#fbfffe] bg-[#fbfffe]"
                                 >
                                   +{formatIndianCurrency(increment)}
                                 </Button>
@@ -422,24 +423,24 @@ const OwnerDashboard: React.FC = () => {
                         )}
 
                         {/* Recent bids */}
-                        <div className="glass-effect p-4 rounded-lg">
-                          <h4 className="font-medium mb-3 text-purple-800">Recent Bids</h4>
+                        <div className="bg-gradient-to-r from-[#6d676e]/10 to-[#faa916]/10 p-4 rounded-lg border border-[#6d676e]">
+                          <h4 className="font-medium mb-3 text-[#1b1b1e]">Recent Bids</h4>
                           <div className="space-y-2 max-h-48 overflow-y-auto">
                             {bidHistory.map((bid) => (
-                              <div key={bid.id} className="flex justify-between items-center text-sm bg-white p-3 rounded-lg border shadow-sm">
-                                <span className="font-medium">
+                              <div key={bid.id} className="flex justify-between items-center text-sm bg-[#fbfffe] p-3 rounded-lg border border-[#6d676e] shadow-sm">
+                                <span className="font-medium text-[#1b1b1e]">
                                   {bid.bidderName}
-                                  <span className="text-xs text-gray-500 ml-1">({bid.teamName})</span>
+                                  <span className="text-xs text-[#6d676e] ml-1">({bid.teamName})</span>
                                 </span>
-                                <span className="font-bold text-green-600">{formatIndianCurrency(bid.amount || 0)}</span>
+                                <span className="font-bold text-[#faa916]">{formatIndianCurrency(bid.amount || 0)}</span>
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-12 text-gray-500">
-                        <Gavel className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <div className="text-center py-12 text-[#6d676e]">
+                        <Gavel className="h-16 w-16 mx-auto mb-4 text-[#6d676e]" />
                         <p className="text-lg font-medium">No active auction at the moment</p>
                         <p className="text-sm">Check back later for upcoming auctions</p>
                       </div>
@@ -449,9 +450,9 @@ const OwnerDashboard: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="roster">
-                <div className="premium-card rounded-xl">
-                  <div className="p-6 border-b border-purple-100">
-                    <h2 className="text-xl font-bold text-purple-800">My Team Roster</h2>
+                <div className="bg-[#fbfffe] rounded-xl shadow-lg border border-[#6d676e]">
+                  <div className="p-6 border-b border-[#6d676e]">
+                    <h2 className="text-xl font-bold text-[#1b1b1e]">My Team Roster</h2>
                   </div>
                   <div className="p-6">
                     {roster.length > 0 ? (
@@ -459,10 +460,10 @@ const OwnerDashboard: React.FC = () => {
                         {roster.map((actress) => (
                           <div 
                             key={actress.id} 
-                            className="premium-card rounded-lg p-4 border-l-4"
+                            className="bg-[#fbfffe] rounded-lg p-4 border-l-4 shadow-lg"
                             style={{ 
                               borderLeftColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS],
-                              backgroundColor: team.primaryColor || 'white' 
+                              backgroundColor: team.primaryColor || '#fbfffe' 
                             }}
                           >
                             <div className="flex items-center space-x-4">
@@ -473,18 +474,18 @@ const OwnerDashboard: React.FC = () => {
                                 style={{ borderColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] }}
                               />
                               <div className="flex-1">
-                                <h3 className="font-semibold" style={{ color: team.secondaryColor || 'black' }}>
+                                <h3 className="font-semibold" style={{ color: team.secondaryColor || '#1b1b1e' }}>
                                   {actress.name}
                                 </h3>
                                 <Badge 
                                   className="text-white mt-1"
                                   style={{ 
-                                    backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || 'gray' 
+                                    backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || '#96031a' 
                                   }}
                                 >
                                   {actress.category}
                                 </Badge>
-                                <p className="text-sm font-medium text-green-600 mt-1">
+                                <p className="text-sm font-medium text-[#faa916] mt-1">
                                   {formatIndianCurrency(actress.finalPrice || actress.currentPrice)}
                                 </p>
                               </div>
@@ -494,9 +495,9 @@ const OwnerDashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className="text-center py-12">
-                        <Star className="mx-auto h-16 w-16 text-gray-400" />
-                        <h3 className="mt-4 text-lg font-medium text-gray-900">No actresses yet</h3>
-                        <p className="mt-2 text-gray-500">
+                        <Star className="mx-auto h-16 w-16 text-[#6d676e]" />
+                        <h3 className="mt-4 text-lg font-medium text-[#1b1b1e]">No actresses yet</h3>
+                        <p className="mt-2 text-[#6d676e]">
                           Start bidding in the auction to build your team!
                         </p>
                       </div>

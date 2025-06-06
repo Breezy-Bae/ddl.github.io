@@ -29,9 +29,9 @@ const CategoryStatus: React.FC<CategoryStatusProps> = ({ roster, maxActresses })
   };
 
   return (
-    <Card className="premium-card">
+    <Card className="bg-[#fbfffe] border-[#6d676e] shadow-lg">
       <CardHeader>
-        <CardTitle className="text-purple-800 flex items-center gap-2">
+        <CardTitle className="text-[#96031a] flex items-center gap-2">
           <Trophy className="h-5 w-5" />
           Category Status
         </CardTitle>
@@ -46,17 +46,17 @@ const CategoryStatus: React.FC<CategoryStatusProps> = ({ roster, maxActresses })
             return (
               <div 
                 key={name} 
-                className="glass-effect p-3 rounded-lg border"
+                className="bg-gradient-to-br from-[#fbfffe] to-[#6d676e]/10 p-3 rounded-lg border-2 shadow-md hover:shadow-lg transition-all duration-200"
                 style={{ borderColor: CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS] }}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className="h-4 w-4" style={{ color: CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS] }} />
-                  <span className="text-xs font-medium truncate">{name}</span>
+                  <span className="text-xs font-medium truncate text-[#1b1b1e]">{name}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <Badge 
                     variant="outline"
-                    className="text-white text-xs"
+                    className="text-white text-xs font-bold"
                     style={{ 
                       backgroundColor: CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS],
                       borderColor: CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS]
@@ -64,7 +64,7 @@ const CategoryStatus: React.FC<CategoryStatusProps> = ({ roster, maxActresses })
                   >
                     {current}/{limit}
                   </Badge>
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-[#6d676e] font-medium">
                     {remaining} left
                   </span>
                 </div>
@@ -72,16 +72,16 @@ const CategoryStatus: React.FC<CategoryStatusProps> = ({ roster, maxActresses })
             );
           })}
         </div>
-        <div className="mt-4 p-3 glass-effect rounded-lg">
+        <div className="mt-4 p-3 bg-gradient-to-r from-[#96031a]/10 to-[#faa916]/10 rounded-lg border border-[#6d676e]">
           <div className="flex justify-between items-center">
-            <span className="font-medium text-purple-800">Total Squad:</span>
-            <Badge variant="outline" className="bg-purple-100 text-purple-800">
+            <span className="font-medium text-[#1b1b1e]">Total Squad:</span>
+            <Badge variant="outline" className="bg-[#96031a] text-[#fbfffe] border-[#96031a]">
               {roster.length}/{maxActresses}
             </Badge>
           </div>
           <div className="flex justify-between items-center mt-2">
-            <span className="text-sm text-gray-600">Available Slots:</span>
-            <span className="font-medium text-green-600">
+            <span className="text-sm text-[#6d676e]">Available Slots:</span>
+            <span className="font-medium text-[#faa916]">
               {maxActresses - roster.length}
             </span>
           </div>
