@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { doc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import React, { useState, useEffect, useRef } from 'react';
+import { doc, setDoc, updateDoc, serverTimestamp, runTransaction, collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuctionStatus } from '@/hooks/useAuctionStatus';
-import { Actress } from '@/types';
+import { Actress, BidHistory, Team, CATEGORY_COLORS, User } from '@/types';
 import { toast } from '@/hooks/use-toast';
-import { Play, Pause, Square, Timer, Gavel, Settings } from 'lucide-react';
+import { Play, Pause, Square, Timer, Gavel, Settings, Download, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import AuctionCallouts from './AuctionCallouts';
+import { useAuth } from '@/hooks/useAuth';
+import { formatIndianCurrency } from '@/utils/currencyUtils';
+import { exportBidHistory } from '@/utils/exportUtils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface AuctionControlProps {
   actresses: Actress[];
@@ -20,28 +24,117 @@ interface AuctionControlProps {
 
 const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
   const { auctionState } = useAuctionStatus();
+  const { user } = useAuth();
   const [selectedActress, setSelectedActress] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [customDuration, setCustomDuration] = useState(30); // 30 seconds default
   const [showSettings, setShowSettings] = useState(false);
+  const [bidHistory, setBidHistory] = useState<BidHistory[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [activeTeams, setActiveTeams] = useState<Array<{ id: string; name: string; ownerName: string }>>([]);
+  const [pausedStatus, setPausedStatus] = useState({
+    isPaused: false,
+    pausedBy: '',
+    pausedAt: 0
+  });
+  
+  const timerRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const unsubscribeTeams = onSnapshot(
+      query(collection(db, 'teams'), where('isActive', '==', true)),
+      (snapshot) => {
+        const teamsData = snapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as Team));
+        setTeams(teamsData);
+        
+        const activeTeamsList = teamsData
+          .filter(team => team.ownerId)
+          .map(team => ({
+            id: team.id,
+            name: team.name,
+            ownerName: team.ownerName || 'Unknown Owner'
+          }));
+        
+        setActiveTeams(activeTeamsList);
+      }
+    );
+
+    return () => {
+      unsubscribeTeams();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (auctionState?.currentItem) {
+      const unsubscribe = onSnapshot(
+        query(
+          collection(db, 'bidHistory'), 
+          orderBy('timestamp', 'desc')
+        ),
+        (snapshot) => {
+          const bids = snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data() 
+          } as BidHistory));
+          setBidHistory(bids);
+        }
+      );
+      return unsubscribe;
+    }
+  }, [auctionState?.currentItem]);
+
+  useEffect(() => {
+    // Clean up interval when component unmounts
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (auctionState?.isActive && auctionState?.startTime && auctionState?.auctionDuration) {
-      const timer = setInterval(() => {
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
+      // Set up new timer
+      intervalRef.current = setInterval(() => {
         const now = Date.now();
         const startTime = auctionState.startTime?.toMillis() || now;
         const elapsed = Math.floor((now - startTime) / 1000);
         const duration = auctionState.auctionDuration || customDuration;
         const remaining = Math.max(0, duration - elapsed);
+        
         setTimeLeft(remaining);
+        timerRef.current = remaining;
         
         if (remaining === 0) {
           handleEndAuction();
-          clearInterval(timer);
+          if (intervalRef.current) clearInterval(intervalRef.current);
         }
       }, 1000);
 
-      return () => clearInterval(timer);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    } else if (!auctionState?.isActive && auctionState?.pausedAt) {
+      // When paused, keep displaying the paused time
+      setTimeLeft(auctionState.pausedAt);
+      setPausedStatus({
+        isPaused: true, 
+        pausedBy: auctionState.pausedBy || 'Admin', 
+        pausedAt: auctionState.pausedAt
+      });
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     }
   }, [auctionState, customDuration]);
 
@@ -76,7 +169,10 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         auctionDuration: customDuration,
         startTime: serverTimestamp(),
         lastBidTime: null,
-        bidCount: 0
+        bidCount: 0,
+        pausedAt: null,
+        pausedBy: null,
+        activeTeams: activeTeams
       });
 
       // Mark actress as on auction
@@ -101,13 +197,16 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
 
   const pauseAuction = async () => {
     try {
+      const currentTime = timerRef.current || timeLeft;
       await updateDoc(doc(db, 'auction', 'current'), {
-        isActive: false
+        isActive: false,
+        pausedAt: currentTime,
+        pausedBy: user?.displayName || 'Admin'
       });
 
       toast({
         title: "Auction paused",
-        description: "The auction has been paused",
+        description: `The auction has been paused by ${user?.displayName || 'Admin'}`,
       });
     } catch (error) {
       console.error('Error pausing auction:', error);
@@ -116,8 +215,15 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
 
   const resumeAuction = async () => {
     try {
+      const now = new Date();
+      const newDuration = timerRef.current || timeLeft;
+      
       await updateDoc(doc(db, 'auction', 'current'), {
-        isActive: true
+        isActive: true,
+        pausedAt: null,
+        pausedBy: null,
+        startTime: serverTimestamp(),
+        auctionDuration: newDuration
       });
 
       toast({
@@ -170,7 +276,9 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
           highestBidderName: null,
           timeRemaining: 0,
           auctionDuration: 0,
-          bidCount: 0
+          bidCount: 0,
+          pausedAt: null,
+          pausedBy: null
         });
 
         // Update actress status
@@ -220,6 +328,50 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
     }
   };
 
+  const handleCancelBid = async (bid: BidHistory) => {
+    try {
+      // Get previous bid from history
+      const previousBids = bidHistory.filter(b => b.id !== bid.id);
+      const previousBid = previousBids[0]; // The next most recent bid
+      
+      await runTransaction(db, async (transaction) => {
+        const auctionRef = doc(db, 'auction', 'current');
+        
+        if (previousBid) {
+          // Revert to previous bid
+          transaction.update(auctionRef, {
+            highestBid: previousBid.amount,
+            highestBidder: previousBid.userId,
+            highestBidderTeam: previousBid.teamId,
+            highestBidderName: previousBid.bidderName,
+            bidCount: (auctionState?.bidCount || 0) - 1
+          });
+        } else {
+          // If no previous bid, revert to base price
+          transaction.update(auctionRef, {
+            highestBid: auctionState?.currentItem?.basePrice || 0,
+            highestBidder: null,
+            highestBidderTeam: null,
+            highestBidderName: null,
+            bidCount: 0
+          });
+        }
+      });
+      
+      toast({
+        title: "Bid cancelled",
+        description: `Cancelled bid of ₹${bid.amount.toLocaleString()} by ${bid.bidderName}`,
+      });
+    } catch (error) {
+      console.error('Error cancelling bid:', error);
+      toast({
+        title: "Failed to cancel bid",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -237,8 +389,21 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
           timeLeft={timeLeft}
           isActive={auctionState.isActive || false}
           bidCount={auctionState.bidCount || 0}
+          pausedBy={auctionState.pausedBy}
         />
       )}
+
+      {/* Export buttons */}
+      <div className="flex justify-end space-x-2">
+        <Button 
+          variant="outline" 
+          onClick={() => exportBidHistory(bidHistory)}
+          className="flex items-center gap-1"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Export Bids
+        </Button>
+      </div>
 
       {/* Current Auction Status */}
       <Card>
@@ -251,26 +416,34 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
         <CardContent>
           {auctionState?.currentItem ? (
             <div className="space-y-4">
-              <div className="flex gap-6">
+              <div className="flex gap-6 flex-col md:flex-row">
                 {/* Actress Image */}
                 <div className="flex-shrink-0">
                   <img
                     src={auctionState.currentItem.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=600&fit=crop'}
                     alt={auctionState.currentItem.name}
-                    className="w-32 h-48 object-cover rounded-lg border-4 border-purple-200"
+                    className="w-32 h-48 object-cover rounded-lg border-4"
+                    style={{
+                      borderColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#purple-200'
+                    }}
                   />
                 </div>
                 
                 {/* Auction Details */}
                 <div className="flex-1">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-4 flex-col md:flex-row gap-2">
                     <div>
                       <h3 className="text-2xl font-bold">{auctionState.currentItem.name}</h3>
-                      <Badge variant="secondary" className="mt-1 text-lg px-3 py-1">
+                      <Badge 
+                        className="mt-1 text-lg px-3 py-1 text-white"
+                        style={{ 
+                          backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#gray' 
+                        }}
+                      >
                         {auctionState.currentItem.category}
                       </Badge>
                       <p className="text-sm text-gray-600 mt-2">
-                        Base Price: ₹{auctionState.currentItem.basePrice.toLocaleString()}
+                        Base Price: {formatIndianCurrency(auctionState.currentItem.basePrice)}
                       </p>
                     </div>
                     <div className="text-right">
@@ -281,6 +454,12 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                       <Badge variant={auctionState.isActive ? "default" : "secondary"} className="mt-2">
                         {auctionState.isActive ? "Active" : "Paused"}
                       </Badge>
+                      
+                      {!auctionState.isActive && auctionState.pausedBy && (
+                        <p className="text-sm text-amber-600 mt-1">
+                          Paused by {auctionState.pausedBy}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -288,13 +467,18 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-600">Current Highest Bid</p>
-                        <p className="text-3xl font-bold text-green-600">₹{(auctionState.highestBid || 0).toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-green-600">{formatIndianCurrency(auctionState.highestBid || 0)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Leading Bidder</p>
                         <p className="text-xl font-bold text-purple-600">
                           {auctionState.highestBidderName || 'No bids yet'}
                         </p>
+                        {auctionState.highestBidderTeam && teams.find(t => t.id === auctionState.highestBidderTeam) && (
+                          <p className="text-sm font-medium">
+                            Team: {teams.find(t => t.id === auctionState.highestBidderTeam)?.name}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -326,6 +510,107 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                   +30s
                 </Button>
               </div>
+
+              {/* Active Teams */}
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Active Participating Teams</h4>
+                <div className="flex flex-wrap gap-2">
+                  {auctionState.activeTeams && auctionState.activeTeams.length > 0 ? (
+                    auctionState.activeTeams.map((team) => {
+                      const fullTeamData = teams.find(t => t.id === team.id);
+                      return (
+                        <div 
+                          key={team.id}
+                          className="px-3 py-1 rounded-full text-sm"
+                          style={{
+                            backgroundColor: fullTeamData?.primaryColor || '#f3f4f6',
+                            color: fullTeamData?.secondaryColor || '#000000'
+                          }}
+                        >
+                          {team.name} ({team.ownerName})
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500">No teams are currently participating</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Bids */}
+              {bidHistory.length > 0 && (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold">Bid History</h4>
+                  </div>
+                  <div className="bg-white rounded-md border overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bidder</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {bidHistory.slice(0, 7).map((bid, index) => {
+                          const teamData = teams.find(t => t.id === bid.teamId);
+                          return (
+                            <tr key={bid.id} className={index === 0 ? "bg-green-50" : ""}>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                                {bid.bidderName}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm">
+                                <div 
+                                  className="px-2 py-1 rounded"
+                                  style={{
+                                    backgroundColor: teamData?.primaryColor || 'transparent',
+                                    color: teamData?.secondaryColor || 'inherit'
+                                  }}
+                                >
+                                  {bid.teamName}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm">
+                                {formatIndianCurrency(bid.amount)}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800">
+                                      <AlertTriangle className="h-4 w-4" />
+                                      Cancel
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Cancel Bid</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to cancel the bid of {formatIndianCurrency(bid.amount)} by {bid.bidderName}? 
+                                        This will revert the auction to the previous highest bid.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>No, Keep Bid</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => handleCancelBid(bid)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Yes, Cancel Bid
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
@@ -395,7 +680,13 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                         />
                         <div className="flex items-center justify-between w-full">
                           <span>{actress.name}</span>
-                          <Badge variant="outline" className="ml-2">
+                          <Badge 
+                            variant="outline" 
+                            className="ml-2 text-white"
+                            style={{ 
+                              backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || '#gray' 
+                            }}
+                          >
                             {actress.category}
                           </Badge>
                         </div>
@@ -443,12 +734,17 @@ const AuctionControl: React.FC<AuctionControlProps> = ({ actresses }) => {
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-semibold">{actress.name}</h3>
-                        <Badge variant="outline">
+                        <Badge 
+                          className="text-white"
+                          style={{
+                            backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || '#gray'
+                          }}
+                        >
                           {actress.category}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600">
-                        Base Price: ₹{actress.basePrice.toLocaleString()}
+                        Base Price: {formatIndianCurrency(actress.basePrice)}
                       </p>
                       {actress.isOnAuction && (
                         <Badge variant="destructive" className="mt-2">

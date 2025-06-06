@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -13,9 +14,11 @@ import AddActressForm from './AddActressForm';
 import UsersTable from './UsersTable';
 import ActressPoolTable from './ActressPoolTable';
 import AuctionControl from './AuctionControl';
-import { Users, UserPlus, Trophy, Star, Gavel, LogOut, Edit } from 'lucide-react';
+import { Users, UserPlus, Trophy, Star, Gavel, LogOut, Edit, FileSpreadsheet } from 'lucide-react';
 import { formatIndianCurrency } from '@/utils/currencyUtils';
 import EditTeamForm from './EditTeamForm';
+import { exportTeamLineups } from '@/utils/exportUtils';
+import { toast } from '@/hooks/use-toast';
 
 const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
@@ -71,6 +74,23 @@ const AdminDashboard: React.FC = () => {
   const availableActresses = actresses.filter(a => a.isAvailable && !a.teamId);
   const soldActresses = actresses.filter(a => a.teamId);
 
+  const handleExportLineups = () => {
+    const result = exportTeamLineups(teams, actresses);
+    
+    if (result) {
+      toast({
+        title: "Export successful",
+        description: "Team lineups have been exported to Excel"
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Failed to export team lineups",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -81,14 +101,24 @@ const AdminDashboard: React.FC = () => {
               <h1 className="text-2xl font-bold text-purple-800">Admin Dashboard</h1>
               <p className="text-gray-600">Diva Draft League Management</p>
             </div>
-            <Button 
-              onClick={logout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleExportLineups}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Export Teams
+              </Button>
+              <Button 
+                onClick={logout}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -196,7 +226,12 @@ const AdminDashboard: React.FC = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {teams.map((team) => (
-                    <Card key={team.id} className="border">
+                    <Card key={team.id} className="border"
+                      style={{
+                        backgroundColor: team.primaryColor || 'white',
+                        color: team.secondaryColor || 'black'
+                      }}
+                    >
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-lg">{team.name}</h3>
@@ -213,7 +248,7 @@ const AdminDashboard: React.FC = () => {
                             </Button>
                           </div>
                         </div>
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-sm bg-white bg-opacity-75 p-2 rounded">
                           <div className="flex justify-between">
                             <span>Owner:</span>
                             <span className="font-medium">{team.ownerName || 'Unassigned'}</span>
@@ -276,14 +311,19 @@ const AdminDashboard: React.FC = () => {
                         const usagePercentage = budget > 0 ? (usedBudget / budget * 100) : 0;
                         
                         return (
-                          <div key={team.id} className="border rounded-lg p-3">
+                          <div key={team.id} className="border rounded-lg p-3"
+                            style={{
+                              backgroundColor: team.primaryColor || 'white',
+                              color: team.secondaryColor || 'black',
+                            }}
+                          >
                             <div className="flex justify-between items-center mb-2">
                               <span className="font-medium">{team.name}</span>
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-gray-800 bg-white bg-opacity-80 px-2 py-1 rounded">
                                 {usagePercentage.toFixed(1)}% used
                               </span>
                             </div>
-                            <div className="flex justify-between text-sm text-gray-600 mb-2">
+                            <div className="flex justify-between text-sm bg-white bg-opacity-75 p-2 rounded mb-2">
                               <span>Budget: {formatIndianCurrency(budget)}</span>
                               <span>Remaining: {formatIndianCurrency(remainingPurse)}</span>
                             </div>
@@ -304,12 +344,19 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold mb-4">Category Distribution</h3>
                     <div className="space-y-2">
-                      {['Marquee', 'Blockbuster Queens', 'Global Glam', 'Drama Diva', 'Next-Gen Stars', 'Timeless Icons', 'Gen-Z'].map((category) => {
+                      {['Blockbuster Queens', 'Global Glam', 'Drama Diva', 'Next-Gen Stars', 'Timeless Icons', 'Gen-Z'].map((category) => {
                         const categoryActresses = actresses.filter(a => a.category === category);
                         const soldCount = categoryActresses.filter(a => a.teamId).length;
                         return (
                           <div key={category} className="flex justify-between items-center py-2 border-b">
-                            <span className="font-medium">{category}</span>
+                            <Badge 
+                              className="text-white px-3 py-1"
+                              style={{ 
+                                backgroundColor: CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS] || 'gray' 
+                              }}
+                            >
+                              {category}
+                            </Badge>
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-gray-500">
                                 {soldCount}/{categoryActresses.length} sold

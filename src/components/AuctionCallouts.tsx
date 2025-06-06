@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mic, Volume2, Clock } from 'lucide-react';
+import { Mic, Volume2, Clock, PauseCircle } from 'lucide-react';
 
 interface AuctionCalloutsProps {
   currentBid: number;
@@ -11,6 +11,7 @@ interface AuctionCalloutsProps {
   timeLeft: number;
   isActive: boolean;
   bidCount: number;
+  pausedBy?: string | null;
 }
 
 const AuctionCallouts: React.FC<AuctionCalloutsProps> = ({
@@ -19,7 +20,8 @@ const AuctionCallouts: React.FC<AuctionCalloutsProps> = ({
   actressName,
   timeLeft,
   isActive,
-  bidCount
+  bidCount,
+  pausedBy
 }) => {
   const [callout, setCallout] = useState('');
   const [isCountdown, setIsCountdown] = useState(false);
@@ -70,7 +72,15 @@ const AuctionCallouts: React.FC<AuctionCalloutsProps> = ({
   ];
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      if (pausedBy) {
+        setCallout(`AUCTION PAUSED BY ${pausedBy.toUpperCase()}`);
+        setIsCountdown(false);
+        setCountdownPhase('PAUSED');
+        setDramaticCountdown('');
+      }
+      return;
+    }
 
     if (timeLeft <= 15 && timeLeft > 0) {
       setIsCountdown(true);
@@ -102,37 +112,48 @@ const AuctionCallouts: React.FC<AuctionCalloutsProps> = ({
         setCallout(`Who will open the bidding for the gorgeous ${actressName}? Let's start the action!`);
       }
     }
-  }, [currentBid, bidderName, timeLeft, isActive, actressName, bidCount]);
+  }, [currentBid, bidderName, timeLeft, isActive, actressName, bidCount, pausedBy]);
 
-  if (!isActive) return null;
+  // Color scheme based on state
+  let colorScheme = isActive ? 
+    (isCountdown ? 'from-red-600 to-orange-600' : 'from-purple-600 to-pink-600') : 
+    'from-gray-600 to-slate-600';
 
   return (
-    <Card className={`${isCountdown ? 'bg-gradient-to-r from-red-600 to-orange-600' : 'bg-gradient-to-r from-purple-600 to-pink-600'} text-white border-0 shadow-2xl`}>
+    <Card className={`bg-gradient-to-r ${colorScheme} text-white border-0 shadow-2xl`}>
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            {isCountdown ? (
+            {!isActive ? (
+              <PauseCircle className="h-6 w-6 animate-pulse" />
+            ) : isCountdown ? (
               <Clock className={`h-6 w-6 ${timeLeft <= 5 ? 'animate-spin' : 'animate-pulse'}`} />
             ) : (
               <Mic className="h-5 w-5" />
             )}
-            <Badge variant="secondary" className={`${isCountdown ? 'bg-red-100 text-red-800' : 'bg-white text-purple-600'} font-bold px-3 py-1`}>
-              {isCountdown ? countdownPhase || "COUNTDOWN" : "LIVE AUCTION"}
+            <Badge variant="secondary" className={`${!isActive ? 'bg-red-200 text-red-800' : isCountdown ? 'bg-red-100 text-red-800' : 'bg-white text-purple-600'} font-bold px-3 py-1`}>
+              {!isActive ? "AUCTION PAUSED" : isCountdown ? countdownPhase || "COUNTDOWN" : "LIVE AUCTION"}
             </Badge>
           </div>
           
           <div className="flex-1 text-center">
-            <p className={`font-bold ${isCountdown ? 'text-2xl animate-pulse' : 'text-xl'} mb-2`}>
+            <p className={`font-bold ${!isActive ? 'text-2xl' : isCountdown ? 'text-2xl animate-pulse' : 'text-xl'} mb-2`}>
               {callout}
             </p>
             
-            {dramaticCountdown && (
+            {dramaticCountdown && isActive && (
               <div className="text-3xl font-bold animate-bounce text-yellow-300">
                 {dramaticCountdown}
               </div>
             )}
             
-            {bidCount > 0 && !isCountdown && (
+            {pausedBy && !isActive && (
+              <p className="text-lg text-yellow-300 mt-2">
+                Paused by admin: {pausedBy}
+              </p>
+            )}
+            
+            {bidCount > 0 && isActive && !isCountdown && (
               <p className="text-sm opacity-90 mt-1">
                 🔥 {bidCount} bids so far! The competition is fierce! 🔥
               </p>
@@ -140,10 +161,10 @@ const AuctionCallouts: React.FC<AuctionCalloutsProps> = ({
           </div>
           
           <div className="text-right">
-            <div className={`text-2xl font-bold ${timeLeft <= 10 ? 'text-yellow-300 animate-pulse' : ''}`}>
+            <div className={`text-2xl font-bold ${timeLeft <= 10 && isActive ? 'text-yellow-300 animate-pulse' : ''}`}>
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
             </div>
-            {timeLeft <= 5 && timeLeft > 0 && (
+            {timeLeft <= 5 && timeLeft > 0 && isActive && (
               <div className="text-4xl font-bold animate-bounce text-yellow-300">
                 {timeLeft}
               </div>

@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuctionStatus } from '@/hooks/useAuctionStatus';
 import { useTeamData } from '@/hooks/useTeamData';
 import { placeBid, validateBid, validateCategoryQuota } from '@/utils/auctionUtils';
-import { CATEGORY_COLORS, CATEGORY_LIMITS, BidHistory } from '@/types';
+import { CATEGORY_COLORS, BidHistory } from '@/types';
 import { formatIndianCurrency } from '@/utils/currencyUtils';
 import { toast } from '@/hooks/use-toast';
 import { Trophy, DollarSign, Users, Star, Gavel, LogOut, Timer, TrendingUp, IndianRupee } from 'lucide-react';
@@ -60,6 +60,8 @@ const OwnerDashboard: React.FC = () => {
       }, 1000);
 
       return () => clearInterval(timer);
+    } else if (!auctionState?.isActive && auctionState?.pausedAt) {
+      setTimeLeft(auctionState.pausedAt);
     }
   }, [auctionState]);
 
@@ -107,7 +109,7 @@ const OwnerDashboard: React.FC = () => {
       setBidAmount('');
       toast({
         title: "Bid placed successfully",
-        description: `Your bid of ₹${amount.toLocaleString()} has been placed! Time extended by 3 seconds.`,
+        description: `Your bid of ${formatIndianCurrency(amount)} has been placed! Time extended by 3 seconds.`,
       });
     } catch (error: any) {
       toast({
@@ -126,6 +128,21 @@ const OwnerDashboard: React.FC = () => {
 
   const getCategoryCount = (category: string) => {
     return roster.filter(actress => actress.category === category).length;
+  };
+
+  // Calculate bid increments based on the current bid
+  const getBidIncrements = (currentBid: number) => {
+    if (currentBid < 100000) { // < 1 Lakh
+      return [10000, 25000, 50000]; // 10k, 25k, 50k
+    } else if (currentBid < 1000000) { // < 10 Lakhs
+      return [100000, 200000, 500000]; // 1L, 2L, 5L
+    } else if (currentBid < 5000000) { // < 50 Lakhs
+      return [200000, 500000, 1000000]; // 2L, 5L, 10L
+    } else if (currentBid < 10000000) { // < 1 Cr
+      return [500000, 1000000, 2000000]; // 5L, 10L, 20L
+    } else {
+      return [1000000, 2000000, 5000000]; // 10L, 20L, 50L
+    }
   };
 
   // Show loading state while data is being fetched
@@ -157,6 +174,11 @@ const OwnerDashboard: React.FC = () => {
     );
   }
 
+  const teamStyle = {
+    backgroundColor: team.primaryColor || 'white',
+    color: team.secondaryColor || 'black',
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -164,7 +186,10 @@ const OwnerDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-purple-800">
+              <h1 
+                className="text-2xl font-bold px-3 py-1 rounded" 
+                style={teamStyle}
+              >
                 {team ? `${team.name} Dashboard` : 'Team Dashboard'}
               </h1>
               <p className="text-gray-600">Diva Draft League</p>
@@ -260,6 +285,7 @@ const OwnerDashboard: React.FC = () => {
                       timeLeft={timeLeft}
                       isActive={auctionState.isActive || false}
                       bidCount={auctionState.bidCount || 0}
+                      pausedBy={auctionState.pausedBy}
                     />
                   </div>
                 )}
@@ -273,7 +299,7 @@ const OwnerDashboard: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {auctionState?.isActive && auctionState?.currentItem ? (
+                    {auctionState?.currentItem ? (
                       <div className="space-y-4">
                         {/* Actress Image and Details */}
                         <div className="flex gap-4">
@@ -281,7 +307,10 @@ const OwnerDashboard: React.FC = () => {
                             <img
                               src={auctionState.currentItem.imageUrl || 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=200&h=250&fit=crop'}
                               alt={auctionState.currentItem.name}
-                              className="w-24 h-32 object-cover rounded-lg border-2 border-purple-200"
+                              className="w-24 h-32 object-cover rounded-lg border-2"
+                              style={{ 
+                                borderColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'purple' 
+                              }}
                             />
                           </div>
                           <div className="flex-1">
@@ -289,9 +318,9 @@ const OwnerDashboard: React.FC = () => {
                               <div>
                                 <h3 className="text-lg font-semibold">{auctionState.currentItem.name}</h3>
                                 <Badge 
-                                  className="mt-1"
+                                  className="mt-1 text-white"
                                   style={{ 
-                                    backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || '#gray' 
+                                    backgroundColor: CATEGORY_COLORS[auctionState.currentItem.category as keyof typeof CATEGORY_COLORS] || 'gray' 
                                   }}
                                 >
                                   {auctionState.currentItem.category}
@@ -307,15 +336,36 @@ const OwnerDashboard: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Active Participating Teams */}
+                        {auctionState.activeTeams && auctionState.activeTeams.length > 0 && (
+                          <div className="bg-gray-50 p-3 rounded border mb-3">
+                            <p className="text-sm font-medium mb-2">Participating Teams:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {auctionState.activeTeams.map(activeTeam => (
+                                <Badge key={activeTeam.id} variant="outline" className="px-3 py-1">
+                                  {activeTeam.name} ({activeTeam.ownerName})
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border-2 border-green-200">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-sm text-gray-600">Current Highest Bid:</span>
-                            <span className="text-2xl font-bold text-green-600">₹{(auctionState.highestBid || 0).toLocaleString()}</span>
+                            <span className="text-2xl font-bold text-green-600">{formatIndianCurrency(auctionState.highestBid || 0)}</span>
                           </div>
                           {auctionState.highestBidderName && (
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Leading Bidder:</span>
-                              <span className="font-bold text-purple-600">{auctionState.highestBidderName}</span>
+                              <span className="font-bold text-purple-600">
+                                {auctionState.highestBidderName} 
+                                {auctionState.highestBidderTeam && (
+                                  <span className="text-sm ml-1 opacity-80">
+                                    ({auctionState.activeTeams?.find(t => t.id === auctionState.highestBidderTeam)?.name})
+                                  </span>
+                                )}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -327,11 +377,13 @@ const OwnerDashboard: React.FC = () => {
                             value={bidAmount}
                             onChange={(e) => setBidAmount(e.target.value)}
                             className="flex-1"
+                            disabled={!auctionState.isActive}
                           />
                           <Button 
                             onClick={handlePlaceBid}
-                            disabled={!bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
+                            disabled={!auctionState.isActive || !bidAmount || parseInt(bidAmount) <= (auctionState.highestBid || 0)}
                             className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
+                            style={teamStyle}
                           >
                             <TrendingUp className="h-4 w-4" />
                             Bid
@@ -339,28 +391,33 @@ const OwnerDashboard: React.FC = () => {
                         </div>
 
                         {/* Quick bid buttons */}
-                        <div className="flex gap-2 flex-wrap">
-                          {[50000, 100000, 200000, 500000].map((amount) => (
-                            <Button
-                              key={amount}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setBidAmount(((auctionState.highestBid || 0) + amount).toString())}
-                              disabled={(auctionState.highestBid || 0) + amount > (team.remainingPurse || 0)}
-                            >
-                              +₹{amount.toLocaleString()}
-                            </Button>
-                          ))}
-                        </div>
+                        {auctionState.isActive && (
+                          <div className="flex gap-2 flex-wrap">
+                            {getBidIncrements(auctionState.highestBid || 0).map((increment) => (
+                              <Button
+                                key={increment}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setBidAmount(((auctionState.highestBid || 0) + increment).toString())}
+                                disabled={(auctionState.highestBid || 0) + increment > (team.remainingPurse || 0)}
+                              >
+                                +{formatIndianCurrency(increment)}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Recent bids */}
                         <div>
                           <h4 className="font-medium mb-2">Recent Bids</h4>
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
                             {bidHistory.map((bid) => (
                               <div key={bid.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                                <span className="font-medium">{bid.bidderName}</span>
-                                <span>₹{(bid.amount || 0).toLocaleString()}</span>
+                                <span className="font-medium">
+                                  {bid.bidderName}
+                                  <span className="text-xs text-gray-500 ml-1">({bid.teamName})</span>
+                                </span>
+                                <span>{formatIndianCurrency(bid.amount || 0)}</span>
                               </div>
                             ))}
                           </div>
@@ -386,7 +443,7 @@ const OwnerDashboard: React.FC = () => {
                     {roster.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {roster.map((actress) => (
-                          <Card key={actress.id} className="border">
+                          <Card key={actress.id} className="border" style={{ backgroundColor: team.primaryColor || 'white' }}>
                             <CardContent className="p-4">
                               <div className="flex items-center space-x-4">
                                 <img 
@@ -395,9 +452,18 @@ const OwnerDashboard: React.FC = () => {
                                   className="w-16 h-20 object-cover rounded"
                                 />
                                 <div className="flex-1">
-                                  <h3 className="font-semibold">{actress.name}</h3>
-                                  <p className="text-sm text-gray-600">{actress.category}</p>
-                                  <p className="text-sm font-medium text-green-600">
+                                  <h3 className="font-semibold" style={{ color: team.secondaryColor || 'black' }}>
+                                    {actress.name}
+                                  </h3>
+                                  <Badge 
+                                    className="text-white mt-1"
+                                    style={{ 
+                                      backgroundColor: CATEGORY_COLORS[actress.category as keyof typeof CATEGORY_COLORS] || 'gray' 
+                                    }}
+                                  >
+                                    {actress.category}
+                                  </Badge>
+                                  <p className="text-sm font-medium text-green-600 mt-1">
                                     {formatIndianCurrency(actress.finalPrice || actress.currentPrice)}
                                   </p>
                                 </div>

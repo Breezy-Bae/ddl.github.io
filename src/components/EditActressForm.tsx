@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +26,10 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
     imageUrl: actress.imageUrl || ''
   });
   const [loading, setLoading] = useState(false);
+  const [removingFromTeam, setRemovingFromTeam] = useState(false);
 
-  const categories: Array<'Marquee' | 'Blockbuster Queens' | 'Global Glam' | 'Drama Diva' | 'Next-Gen Stars' | 'Timeless Icons' | 'Gen-Z'> = [
-    'Marquee', 'Blockbuster Queens', 'Global Glam', 'Drama Diva', 
+  const categories: Array<'Blockbuster Queens' | 'Global Glam' | 'Drama Diva' | 'Next-Gen Stars' | 'Timeless Icons' | 'Gen-Z'> = [
+    'Blockbuster Queens', 'Global Glam', 'Drama Diva', 
     'Next-Gen Stars', 'Timeless Icons', 'Gen-Z'
   ];
 
@@ -79,6 +80,56 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveFromTeam = async () => {
+    setRemovingFromTeam(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        // Get the team document
+        let teamRef = null;
+        if (actress.teamId) {
+          teamRef = doc(db, 'teams', actress.teamId);
+          const teamDoc = await transaction.get(teamRef);
+          
+          if (teamDoc.exists()) {
+            const teamData = teamDoc.data();
+            
+            // Update team's remaining purse and actress count
+            transaction.update(teamRef, {
+              remainingPurse: (teamData.remainingPurse || 0) + (actress.purchasePrice || 0),
+              currentActresses: Math.max(0, (teamData.currentActresses || 1) - 1)
+            });
+          }
+        }
+        
+        // Update actress to be available for auction again
+        const actressRef = doc(db, 'actresses', actress.id);
+        transaction.update(actressRef, {
+          isAvailable: true,
+          isOnAuction: false,
+          teamId: null,
+          soldToTeam: null,
+          finalPrice: null,
+          purchasePrice: null,
+          soldAt: null
+        });
+      });
+      
+      toast({
+        title: "Actress returned to pool",
+        description: `${actress.name} has been removed from team and is available for auction again. Team's budget has been refunded.`,
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove actress from team",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingFromTeam(false);
     }
   };
 
@@ -143,28 +194,55 @@ const EditActressForm: React.FC<EditActressFormProps> = ({ isOpen, onClose, actr
             />
           </div>
 
-          <DialogFooter className="flex justify-between">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive">Delete</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Actress</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete {actress.name}? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} disabled={loading}>
-                    {loading ? 'Deleting...' : 'Delete'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
+          <DialogFooter className="flex justify-between flex-wrap gap-2">
             <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive">Delete</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Actress</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete {actress.name}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                      {loading ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {actress.teamId && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="outline" className="border-orange-500 text-orange-600 hover:bg-orange-50">
+                      Return to Pool
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Return Actress to Pool</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to return {actress.name} to the auction pool? 
+                        This will refund {formatIndianCurrency(actress.purchasePrice || 0)} to the team's budget.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRemoveFromTeam} disabled={removingFromTeam}>
+                        {removingFromTeam ? 'Processing...' : 'Return to Pool'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+
+            <div className="flex gap-2 ml-auto">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
               <Button type="submit" disabled={loading}>
                 {loading ? 'Updating...' : 'Update'}

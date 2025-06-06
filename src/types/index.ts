@@ -20,12 +20,14 @@ export interface Team {
   ownerName: string | null;
   createdAt: any;
   isActive: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export interface Actress {
   id: string;
   name: string;
-  category: 'Marquee' | 'Blockbuster Queens' | 'Global Glam' | 'Drama Diva' | 'Next-Gen Stars' | 'Timeless Icons' | 'Gen-Z';
+  category: 'Blockbuster Queens' | 'Global Glam' | 'Drama Diva' | 'Next-Gen Stars' | 'Timeless Icons' | 'Gen-Z';
   basePrice: number;
   currentPrice: number;
   imageUrl: string;
@@ -57,6 +59,9 @@ export interface AuctionState {
   bidCount: number;
   startTime: any;
   lastBidTime: any;
+  pausedAt?: number;
+  pausedBy?: string;
+  activeTeams?: Array<{id: string, name: string, ownerName: string}>;
 }
 
 export interface BidHistory {
@@ -79,11 +84,10 @@ export const CATEGORY_LIMITS = {
 };
 
 export const CATEGORY_COLORS = {
-  'Marquee': '#531cb3',
-  'Blockbuster Queens': '#944bbb',
-  'Global Glam': '#aa7bc3',
-  'Drama Diva': '#cc92c2',
-  'Next-Gen Stars': '#dba8ac',
-  'Timeless Icons': '#7c4fd1',
-  'Gen-Z': '#b073cf'
+  'Blockbuster Queens': '#e53e3e', // Red
+  'Global Glam': '#805ad5', // Purple
+  'Drama Diva': '#3182ce', // Blue
+  'Next-Gen Stars': '#dd6b20', // Orange
+  'Timeless Icons': '#8b4513', // Brown
+  'Gen-Z': '#38a169' // Green
 };
